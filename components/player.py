@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 
 import arcade
@@ -30,10 +16,14 @@ class Player(generics.GenericObject):
     SCROLLER_TILESET = "resources/character/AnimationSheet_OverheadMew.tmx"
 
     def __init__(self, coords, outline):
-        super().__init__(coords=coords, nametype="Player",
-                         tileset_path=self.SCROLLER_TILESET,
-                         outline=outline,
-                         can_flip=True, can_flash=True)
+        super().__init__(
+            coords=coords,
+            nametype="Player",
+            tileset_path=self.SCROLLER_TILESET,
+            outline=outline,
+            can_flip=True,
+            can_flash=True,
+        )
 
         self.direction = self.DIR_S
         self.face_towards = self.DIR_E
@@ -127,12 +117,14 @@ class Player(generics.GenericObject):
         self.prev_x = self.x
         self.prev_y = self.y
         self.move(constants.TICK_S * self.x_speed, constants.TICK_S * self.y_speed)
-        self.update_hitbox([
-            hitbox.Point(self.x - 16, self.y - 16),
-            hitbox.Point(self.x + 16, self.y - 16),
-            hitbox.Point(self.x + 16, self.y + 16),
-            hitbox.Point(self.x - 16, self.y + 16),
-        ])
+        self.update_hitbox(
+            [
+                hitbox.Point(self.x - 16, self.y - 16),
+                hitbox.Point(self.x + 16, self.y - 16),
+                hitbox.Point(self.x + 16, self.y + 16),
+                hitbox.Point(self.x - 16, self.y + 16),
+            ]
+        )
         logging.debug(f"New position is {self.x, self.y}")
 
     def update_animation(self):
@@ -152,8 +144,7 @@ class Player(generics.GenericObject):
                     case self.DIR_W:
                         suffix = "left"
 
-                prefix = (
-                    "idle" if (self.x_speed == 0 and self.y_speed == 0) else "walk")
+                prefix = "idle" if (self.x_speed == 0 and self.y_speed == 0) else "walk"
                 self.sprite.set_animation(prefix + "-" + suffix)
             else:
                 if self.in_the_air:

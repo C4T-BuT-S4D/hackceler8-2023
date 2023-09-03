@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 
 from components.player import Player
@@ -25,14 +11,15 @@ PLAYER_RUN_SPEED = 50
 
 
 class PhysicsEngine:
-    def __init__(self,
-                 gravity: int = GRAVITY_CONSTANT,
-                 platformer_rules: bool  = True,
-                 objects: list[
-                generics.GenericObject] = None, qt=None, obj_map=None,
-                 static_objects: list[
-                     generics.GenericObject] = None):
-
+    def __init__(
+        self,
+        gravity: int = GRAVITY_CONSTANT,
+        platformer_rules: bool = True,
+        objects: list[generics.GenericObject] = None,
+        qt=None,
+        obj_map=None,
+        static_objects: list[generics.GenericObject] = None,
+    ):
         self.og_gravity = gravity
         self.og_jump_speed = PLAYER_JUMP_SPEED
         self.og_movement_speed = PLAYER_MOVEMENT_SPEED
@@ -50,7 +37,7 @@ class PhysicsEngine:
             self.og_gravity,
             self.og_jump_speed,
             self.og_movement_speed,
-            self.og_run_speed
+            self.og_run_speed,
         ]
 
         # need to be a series of objects that are subject to gravity with coords
@@ -72,7 +59,12 @@ class PhysicsEngine:
         self.exit_on_next = False
 
     def _reset_parameters(self):
-        self.gravity, self.jump_speed, self.movement_speed, self.run_speed = self.original_params
+        (
+            self.gravity,
+            self.jump_speed,
+            self.movement_speed,
+            self.run_speed,
+        ) = self.original_params
         self.jump_override = False
         self.player.jump_override = self.jump_override
         self.current_env = "generic"
@@ -114,13 +106,12 @@ class PhysicsEngine:
             i.move_around()
 
     def _get_collisions_qt(self):
-
         region_of_interest = quadtree.Bounds(
             self.player.bounds.x - 32,
             self.player.bounds.y + 32,
             80,
             80,
-            "current_search_area"
+            "current_search_area",
         )
 
         pots = self.qt.query(region_of_interest)
@@ -135,7 +126,6 @@ class PhysicsEngine:
             self.static_objects.remove(o)
         if o in self.moving_platforms:
             self.moving_platforms.remove(o)
-
 
     def _get_collisions_list(self):
         collisions_x, collisions_y, non_blocking = [], [], []
@@ -212,19 +202,22 @@ class PhysicsEngine:
         logging.debug(mpv)
         if mpv < 0:
             logging.debug(
-                "Negative MPV, collision was downwards (player on the ground)")
+                "Negative MPV, collision was downwards (player on the ground)"
+            )
             max_y_o2 = o1.get_highest_point()
 
-            self.player.place_at(self.player.x, max_y_o2 +
-                                 self.player.get_height() // 2)
+            self.player.place_at(
+                self.player.x, max_y_o2 + self.player.get_height() // 2
+            )
             self.player.in_the_air = False
             self.player.on_the_ground = True
 
         else:
             logging.debug("Positive MPV, collision was upwards")
             min_y_o2 = o1.get_lowest_point()
-            self.player.place_at(self.player.x, min_y_o2 -
-                                 self.player.get_height() // 2)
+            self.player.place_at(
+                self.player.x, min_y_o2 - self.player.get_height() // 2
+            )
 
     def _align_x_edge(self, o1, mpv):
         self.player.x_speed = 0
@@ -236,11 +229,13 @@ class PhysicsEngine:
             logging.debug("Negative MPV, collision was right")
             min_x_o2 = o1.get_leftmost_point()
             self.player.x_speed = 0
-            self.player.place_at(min_x_o2 - self.player.get_width() // 2 - 1,
-                                 self.player.y)
+            self.player.place_at(
+                min_x_o2 - self.player.get_width() // 2 - 1, self.player.y
+            )
         else:
             logging.debug("Positive MPV, collision was left")
             max_x_o2 = o1.get_rightmost_point()
             self.player.x_speed = 0
-            self.player.place_at(max_x_o2 + self.player.get_width() // 2 + 1,
-                                 self.player.y)
+            self.player.place_at(
+                max_x_o2 + self.player.get_width() // 2 + 1, self.player.y
+            )

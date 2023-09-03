@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 from pathlib import Path
 
@@ -36,8 +22,9 @@ def load_textures(tileset, can_flip, can_flash):
             if (flipped and not can_flip) or (flashing and not can_flash):
                 textures[flipped][flashing] = None
             else:
-                textures[flipped][flashing] = load_spritesheet(tileset, flipped,
-                                                               flashing)
+                textures[flipped][flashing] = load_spritesheet(
+                    tileset, flipped, flashing
+                )
     return textures
 
 
@@ -46,15 +33,17 @@ def load_spritesheet(tileset, flipped: bool, flashing: bool):
     for y in range(tileset.tile_count // tileset.columns):
         for x in range(tileset.columns):
             logging.debug(f"loading {tileset.image}")
-            texture = arcade.load_texture(file_name=tileset.image,
-                                          x=x * tileset.tile_width,
-                                          y=y * tileset.tile_height,
-                                          width=tileset.tile_width,
-                                          height=tileset.tile_height,
-                                          flipped_horizontally=flipped)
+            texture = arcade.load_texture(
+                file_name=tileset.image,
+                x=x * tileset.tile_width,
+                y=y * tileset.tile_height,
+                width=tileset.tile_width,
+                height=tileset.tile_height,
+                flipped_horizontally=flipped,
+            )
             if flashing:
                 # Turn non-transparent pixels white.
-                img = texture.image.convert('RGBA')
+                img = texture.image.convert("RGBA")
                 width, _ = img.size
                 for i, px in enumerate(img.getdata()):
                     if px[3] > 0:
@@ -62,8 +51,8 @@ def load_spritesheet(tileset, flipped: bool, flashing: bool):
                         yy = i // width
                         img.putpixel((xx, yy), (255, 255, 255, 255))
                 texture = arcade.Texture(
-                    name=f"{tileset.image},{x},{y},{flashing},{flipped}",
-                    image=img)
+                    name=f"{tileset.image},{x},{y},{flashing},{flipped}", image=img
+                )
             textures.append(texture)
     return textures
 
@@ -75,8 +64,9 @@ class Sprite:
         self.flashing = False
         self.flash_time = 0
         self.tileset_path = tileset_path
-        tileset = \
-            list(pytiled_parser.parse_map(Path(self.tileset_path)).tilesets.values())[0]
+        tileset = list(
+            pytiled_parser.parse_map(Path(self.tileset_path)).tilesets.values()
+        )[0]
         self.tiles = tileset.tiles
         self.textures = load_textures(tileset, can_flip, can_flash)
 
@@ -100,8 +90,9 @@ class Sprite:
     def set_animation(self, name):
         if self.animation is not None and name == self.animation.name:
             return
-        self.animation = animation.Animation(name, self.blinking, self.tiles,
-                                             self.textures[self.flipped][self.flashing])
+        self.animation = animation.Animation(
+            name, self.blinking, self.tiles, self.textures[self.flipped][self.flashing]
+        )
 
     def set_flipped(self, flipped: bool):
         if flipped and self.textures[flipped][self.flashing] is None:

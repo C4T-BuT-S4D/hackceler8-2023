@@ -1,22 +1,9 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 
 from engine import generics
 from engine import hitbox
 import constants
+
 
 class Npc(generics.GenericObject):
     WALK_SPEED = 100  # 100 pixels per second
@@ -26,8 +13,9 @@ class Npc(generics.GenericObject):
     DIR_W = "W"
 
     def __init__(self, coords, name, walk_data, scale, tileset_path):
-        super().__init__(coords, nametype="NPC", tileset_path=tileset_path,
-                         name=name, can_flash=True)
+        super().__init__(
+            coords, nametype="NPC", tileset_path=tileset_path, name=name, can_flash=True
+        )
         self.walk_data = self._load_walk_data(walk_data)
         self.walk_progress = 0
         # Will be overwritten
@@ -100,10 +88,12 @@ class Npc(generics.GenericObject):
 
     def stop_moving(self, x, y):
         # Only stop moving if walking towards the player
-        if ((self.prev_x < self.x and x > self.x) or
-            (self.prev_x > self.x and x < self.x) or
-            (self.prev_y < self.y and y > self.y) or
-            (self.prev_y > self.y and y < self.y)):
+        if (
+            (self.prev_x < self.x and x > self.x)
+            or (self.prev_x > self.x and x < self.x)
+            or (self.prev_y < self.y and y > self.y)
+            or (self.prev_y > self.y and y < self.y)
+        ):
             self.should_move = False
 
     def resume_moving(self):
@@ -139,7 +129,8 @@ class Npc(generics.GenericObject):
             if i >= len(self.walk_data):  # Loops
                 i = 0
                 self.walk_progress -= sum(
-                    [self._get_walk_duration(w) for w in self.walk_data])
+                    [self._get_walk_duration(w) for w in self.walk_data]
+                )
         # Then progress the current step (and possibly next ones).
         delta = constants.TICK_S
         while True:
@@ -156,15 +147,22 @@ class Npc(generics.GenericObject):
 
 class PasswordNpc(Npc):  # An NPC that asks for a password
     def __init__(self, coords, name, walk_data):
-        super().__init__(coords, name, walk_data, scale=1,
-                         tileset_path="resources/NPCs/Snake_NPC.tmx")
+        super().__init__(
+            coords,
+            name,
+            walk_data,
+            scale=1,
+            tileset_path="resources/NPCs/Snake_NPC.tmx",
+        )
         self.sprite.set_animation("walk-front")
 
     def dialogue(self):
         text = "Psssst! Do you know the passssword?"
 
         def yes():
-            self.display_textbox("Then dissssclose it to me!", free_text_fun=password_check)
+            self.display_textbox(
+                "Then dissssclose it to me!", free_text_fun=password_check
+            )
 
         def no():
             self.display_textbox("Oh, that'sssss a shame.")
@@ -180,8 +178,9 @@ class PasswordNpc(Npc):  # An NPC that asks for a password
 
 class BarkNpc(Npc):  # An NPC that can only say one thing
     def __init__(self, coords, name, walk_data):
-        super().__init__(coords, name, walk_data, scale=2,
-                         tileset_path="resources/NPCs/Dog_NPC.tmx")
+        super().__init__(
+            coords, name, walk_data, scale=2, tileset_path="resources/NPCs/Dog_NPC.tmx"
+        )
 
     def dialogue(self):
         self.display_textbox("BARK BARK!")

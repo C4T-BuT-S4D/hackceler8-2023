@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from collections import defaultdict
 from pathlib import Path
 import logging
@@ -37,11 +23,12 @@ from engine import hitbox
 from engine.quadtree import Quadtree, Bounds
 
 
-
-def image_tileset_to_texture(tileset: pytiled_parser.tileset, k: int) -> list[
-    pytiled_parser.Tile]:
+def image_tileset_to_texture(
+    tileset: pytiled_parser.tileset, k: int
+) -> list[pytiled_parser.Tile]:
     logging.debug(
-        f"Parsing set with {tileset.tile_count} tiles ({tileset.tile_width} x {tileset.tile_height}), {tileset.columns} columns")
+        f"Parsing set with {tileset.tile_count} tiles ({tileset.tile_width} x {tileset.tile_height}), {tileset.columns} columns"
+    )
     res_dict = defaultdict(arcade.Texture)
 
     g = arcade.load_spritesheet(
@@ -49,9 +36,9 @@ def image_tileset_to_texture(tileset: pytiled_parser.tileset, k: int) -> list[
         sprite_width=tileset.tile_width,
         sprite_height=tileset.tile_height,
         columns=tileset.columns,
-        count=tileset.tile_count
+        count=tileset.tile_count,
     )
-    for (i, val) in enumerate(g):
+    for i, val in enumerate(g):
         res_dict[k + i] = val
     return res_dict
 
@@ -91,10 +78,16 @@ class BasicTileMap:
         logging.debug(self.width_pixel)
         logging.debug(self.height_pixel)
 
-        self.qt = Quadtree(Bounds(0, self.size[1] * self.tile_size[0], self.size[0] *
-                                  self.tile_size[0], self.size[1] * self.tile_size[0],
-                                  str(uuid.uuid4())),
-                           256)
+        self.qt = Quadtree(
+            Bounds(
+                0,
+                self.size[1] * self.tile_size[0],
+                self.size[0] * self.tile_size[0],
+                self.size[1] * self.tile_size[0],
+                str(uuid.uuid4()),
+            ),
+            256,
+        )
         for o in self.objs:
             if o.bounds.idi == self.player_bounds_id:
                 continue
@@ -166,15 +159,18 @@ class BasicTileMap:
         for row in range(len(layer.data)):
             for column in range(len(layer.data[row])):
                 if layer.data[row][column] != 0:
-                    coords = pytiled_parser.OrderedPair(column * 16,
-                                                        max_y - row * 16)
+                    coords = pytiled_parser.OrderedPair(column * 16, max_y - row * 16)
                     x_0, y_0 = column * 16, max_y - row * 16
-                    polys.append(hitbox.Hitbox([
-                        hitbox.Point(x_0, y_0),
-                        hitbox.Point(x_0 + 16, y_0),
-                        hitbox.Point(x_0 + 16, y_0 - 16),
-                        hitbox.Point(x_0, y_0 - 16),
-                    ]))
+                    polys.append(
+                        hitbox.Hitbox(
+                            [
+                                hitbox.Point(x_0, y_0),
+                                hitbox.Point(x_0 + 16, y_0),
+                                hitbox.Point(x_0 + 16, y_0 - 16),
+                                hitbox.Point(x_0, y_0 - 16),
+                            ]
+                        )
+                    )
         logging.debug(f"Have a total of {len(polys)} elements")
         hc = hitbox.HitboxCollection(polys)
         hc.combine_y()
@@ -183,14 +179,18 @@ class BasicTileMap:
         logging.debug(f"Have a total of {len(res)} objects")
         for i in res:
             if moving:
-                w = moving_platform.MovingPlatform(coords, _Size(16, 16),
-                                               "generic_moving_platform",
-                              perimeter=i.outline)
+                w = moving_platform.MovingPlatform(
+                    coords,
+                    _Size(16, 16),
+                    "generic_moving_platform",
+                    perimeter=i.outline,
+                )
 
                 self.moving_platforms.append(w)
             else:
-                w = wall.Wall(coords, _Size(16, 16), "generic_platform",
-                          perimeter=i.outline)
+                w = wall.Wall(
+                    coords, _Size(16, 16), "generic_platform", perimeter=i.outline
+                )
 
                 self.static_objs.append(w)
 
@@ -219,16 +219,19 @@ class BasicTileMap:
                     continue
                 modifier = layer.properties[str(tt)]
                 if layer.data[row][column] != 0:
-                    coords = pytiled_parser.OrderedPair(column * 16,
-                                                        max_y - row * 16)
+                    coords = pytiled_parser.OrderedPair(column * 16, max_y - row * 16)
                     x_0, y_0 = column * 16, max_y - row * 16
 
-                    polys[modifier].append(hitbox.Hitbox([
-                        hitbox.Point(x_0, y_0),
-                        hitbox.Point(x_0 + 16, y_0),
-                        hitbox.Point(x_0 + 16, y_0 - 16),
-                        hitbox.Point(x_0, y_0 - 16),
-                    ]))
+                    polys[modifier].append(
+                        hitbox.Hitbox(
+                            [
+                                hitbox.Point(x_0, y_0),
+                                hitbox.Point(x_0 + 16, y_0),
+                                hitbox.Point(x_0 + 16, y_0 - 16),
+                                hitbox.Point(x_0, y_0 - 16),
+                            ]
+                        )
+                    )
         for pt in polys:
             logging.debug(f"Parsing {pt} tiles")
             tmp_p = polys[pt]
@@ -244,8 +247,9 @@ class BasicTileMap:
                         _Size(16, 16),
                         f"env_{pt}",
                         perimeter=i.outline,
-                        modifier=pt
-                    ))
+                        modifier=pt,
+                    )
+                )
 
     def parse_item_layer(self, layer):
         class _Size:
@@ -259,14 +263,18 @@ class BasicTileMap:
         for row in range(len(layer.data)):
             for column in range(len(layer.data[row])):
                 if layer.data[row][column] != 0:
-                    coords = pytiled_parser.OrderedPair(column * 16,
-                                                        max_y - row * 16)
+                    coords = pytiled_parser.OrderedPair(column * 16, max_y - row * 16)
                     self.objs.append(
-                        magic_items.Item(coords, layer.properties.get("item_name"),
-                                         layer.properties.get("display_name"),
-                                         layer.properties.get("color")))
-                    logging.debug(f"Added new object of type "
-                                  f"{layer.properties['item_name']}")
+                        magic_items.Item(
+                            coords,
+                            layer.properties.get("item_name"),
+                            layer.properties.get("display_name"),
+                            layer.properties.get("color"),
+                        )
+                    )
+                    logging.debug(
+                        f"Added new object of type " f"{layer.properties['item_name']}"
+                    )
 
     def parse_object(self, o, max_y):
         name = o.name
@@ -274,19 +282,22 @@ class BasicTileMap:
         logging.debug(o.coordinates)
         coords = pytiled_parser.OrderedPair(o.coordinates.x, max_y - o.coordinates.y)
         logging.debug(
-            f"Parsing object of type {name} with properties {props} placed at {coords}")
+            f"Parsing object of type {name} with properties {props} placed at {coords}"
+        )
         if o.name == "Fire":
             if "min_distance" in props:
                 self.dynamic_artifacts.append(
-                    fire.Fire(coords, min_distance=props["min_distance"]))
+                    fire.Fire(coords, min_distance=props["min_distance"])
+                )
             else:
                 logging.warning("No min_distance set")
 
         elif o.name == "ouch":
             md = props.get("min_distance", 16)
             dmg = props.get("damage", 1)
-            self.dynamic_artifacts.append(ouch.Ouch(coords, o.size, min_distance=md,
-                                                    damage=dmg))
+            self.dynamic_artifacts.append(
+                ouch.Ouch(coords, o.size, min_distance=md, damage=dmg)
+            )
             logging.debug("added new ouch object")
 
         elif "npc" in o.name:
@@ -305,7 +316,11 @@ class BasicTileMap:
         elif "key" in o.name:
             logging.debug(o)
             logging.debug("parsing new item object")
-            self.objs.append(magic_items.Item(coords, o.name, props.get("display_name"), props.get("color")))
+            self.objs.append(
+                magic_items.Item(
+                    coords, o.name, props.get("display_name"), props.get("color")
+                )
+            )
 
         elif "door" in o.name:
             logging.debug(o)
@@ -331,8 +346,9 @@ class BasicTileMap:
             p = player.Player(coords, outline=outline)
             self.objs.append(p)
             self.player_bounds_id = p.unique_id
-            logging.debug(f"Added new player with id: {self.player_bounds_id} at "
-                          f"{coords}")
+            logging.debug(
+                f"Added new player with id: {self.player_bounds_id} at " f"{coords}"
+            )
 
         elif o.name == "Weapon":
             logging.info("Adding weapon")

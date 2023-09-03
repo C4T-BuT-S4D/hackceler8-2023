@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 
 import arcade
@@ -35,8 +21,9 @@ class Hackceler8(arcade.Window):
         self.SCREEN_WIDTH = constants.SCREEN_WIDTH
         self.SCREEN_HEIGHT = constants.SCREEN_HEIGHT
         self.SCREEN_TITLE = SCREEN_TITLE
-        super().__init__(self.SCREEN_WIDTH, self.SCREEN_HEIGHT, self.SCREEN_TITLE,
-                         resizable=True)
+        super().__init__(
+            self.SCREEN_WIDTH, self.SCREEN_HEIGHT, self.SCREEN_TITLE, resizable=True
+        )
         self.set_icon(pyglet_load("resources/character/32bit/main32.PNG"))
 
         self.net = net
@@ -58,18 +45,19 @@ class Hackceler8(arcade.Window):
         arcade.set_background_color(arcade.color.DARK_BLUE_GRAY)
 
         self.v_box = arcade.gui.UIBoxLayout()
-        start_button = arcade.gui.UIFlatButton(text="START GAME", width=200,
-                                               style={"font_name":constants.FONT_NAME})
+        start_button = arcade.gui.UIFlatButton(
+            text="START GAME", width=200, style={"font_name": constants.FONT_NAME}
+        )
         self.v_box.add(start_button.with_space_around(bottom=20))
-        quit_button = QuitButton(text="QUIT", width=200,
-                                 style={"font_name":constants.FONT_NAME})
+        quit_button = QuitButton(
+            text="QUIT", width=200, style={"font_name": constants.FONT_NAME}
+        )
         self.v_box.add(quit_button)
         start_button.on_click = self.on_click_start
 
         w = arcade.gui.UIAnchorWidget(
-                anchor_x="center_x",
-                anchor_y="center_y",
-                child=self.v_box)
+            anchor_x="center_x", anchor_y="center_y", child=self.v_box
+        )
         self.main_menu_manager.add(w)
 
     def on_click_start(self, _event):
@@ -114,14 +102,16 @@ class Hackceler8(arcade.Window):
         screen_center_y = self.game.player.y - (self.camera.viewport_height / 2)
 
         # Don't let camera travel past 0
-        screen_center_x = max(screen_center_x, 0)
-        screen_center_y = max(screen_center_y, 0)
+        # screen_center_x = max(screen_center_x, 0)
+        # screen_center_y = max(screen_center_y, 0)
 
-        # additional controls to avoid showing around the map
-        max_screen_center_x = self.game.tiled_map.map_size_pixels[0] - self.SCREEN_WIDTH
-        max_screen_center_y = self.game.tiled_map.map_size_pixels[1] - self.SCREEN_HEIGHT
-        screen_center_x = min(screen_center_x, max_screen_center_x)
-        screen_center_y = min(screen_center_y, max_screen_center_y)
+        # # additional controls to avoid showing around the map
+        # max_screen_center_x = self.game.tiled_map.map_size_pixels[0] - self.SCREEN_WIDTH
+        # max_screen_center_y = (
+        #     self.game.tiled_map.map_size_pixels[1] - self.SCREEN_HEIGHT
+        # )
+        # screen_center_x = min(screen_center_x, max_screen_center_x)
+        # screen_center_y = min(screen_center_y, max_screen_center_y)
 
         player_centered = screen_center_x, screen_center_y
         self.camera.move_to(player_centered)
@@ -133,9 +123,9 @@ class Hackceler8(arcade.Window):
             self.main_menu_manager.draw()
             return
 
-
         self.camera.use()
         arcade.start_render()
+
         self.game.tiled_map.texts[1].draw_scaled(0, 0)
         scene_tmp = arcade.Scene.from_tilemap(self.game.tiled_map_background)
         scene_tmp.draw()
@@ -147,6 +137,43 @@ class Hackceler8(arcade.Window):
             o.draw()
 
         self.game.combat_system.draw()
+
+        for o in (
+            self.game.tiled_map.objs
+            + self.game.tiled_map.static_objs
+            + self.game.tiled_map.moving_platforms
+        ):
+            color = None
+            match o.nametype:
+                case "Wall":
+                    color = arcade.color.RED
+                case "MovingPlatform":
+                    color = arcade.color.RED_BROWN
+                case "Door":
+                    color = arcade.color.BROWN
+                case "NPC":
+                    color = arcade.color.YELLOW
+                case "ExitArea":
+                    color = arcade.color.GREEN
+                case "Player":
+                    color = arcade.color.BURNT_ORANGE
+                case "Item":
+                    color = arcade.color.WHITE
+                case "Arena":
+                    color = arcade.color.BLACK
+                case _:
+                    print(f"skipped object {o.nametype}")
+
+            if color:
+                rect = o.get_rect()
+                arcade.draw_lrtb_rectangle_outline(
+                    rect.x1,
+                    rect.x2,
+                    rect.y2,
+                    rect.y1,
+                    color,
+                    border_width=5,
+                )
 
         if self.game.player is not None:
             self.game.player.draw()
@@ -216,4 +243,3 @@ class Hackceler8(arcade.Window):
             return
         if symbol in self.game.tracked_keys and symbol in self.game.pressed_keys:
             self.game.pressed_keys.remove(symbol)
-

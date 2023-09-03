@@ -1,22 +1,9 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import arcade
 import constants
 from arcade import gui
 
-class Inventory():
+
+class Inventory:
     def __init__(self, game, is_server=False):
         self.game = game
         if is_server:
@@ -37,14 +24,18 @@ class Inventory():
         if len(self.game.combat_system.player_weapons) <= 1:
             self.v_box_weapons.add(self._text_area("WEAPONS", width=100, height=20))
             if len(self.game.combat_system.player_weapons) == 0:
-                self.v_box_weapons.add(self._text_area("* NONE *", width=120, height=20))
+                self.v_box_weapons.add(
+                    self._text_area("* NONE *", width=120, height=20)
+                )
         else:
-            self.v_box_weapons.add(self._text_area("  WEAPONS\n(SWITCH: W/S)", width=176, height=40))
+            self.v_box_weapons.add(
+                self._text_area("  WEAPONS\n(SWITCH: W/S)", width=176, height=40)
+            )
 
         for w in self.game.combat_system.player_weapons:
             text = w.weapon_name
             if w.equipped:
-                text = "* "+text+" *"
+                text = "* " + text + " *"
             self.v_box_weapons.add(self._button(text))
 
         # Display items
@@ -58,17 +49,22 @@ class Inventory():
 
         self.h_box.add(self.v_box_weapons.with_space_around(right=100))
         self.h_box.add(self.v_box_items)
-        self.manager.add(arcade.gui.UIAnchorWidget(
-            anchor_x="center_x",
-            anchor_y="center_y",
-            child=self.h_box))
+        self.manager.add(
+            arcade.gui.UIAnchorWidget(
+                anchor_x="center_x", anchor_y="center_y", child=self.h_box
+            )
+        )
 
     def _text_area(self, text, width, height):
-        return (arcade.gui.UITextArea(
-            text=text, width=width, height=height,
-            font_name=constants.FONT_NAME, font_size=15,
-            text_color=arcade.color.WHITE, multiline=("\n" in text))
-                .with_space_around(bottom=20))
+        return arcade.gui.UITextArea(
+            text=text,
+            width=width,
+            height=height,
+            font_name=constants.FONT_NAME,
+            font_size=15,
+            text_color=arcade.color.WHITE,
+            multiline=("\n" in text),
+        ).with_space_around(bottom=20)
 
     def _button(self, text):
         style = {
@@ -104,7 +100,7 @@ class Inventory():
                 w.equipped = False
                 break
             curr += 1
-        curr = min(len(weps)-1, max(0, curr+delta))
+        curr = min(len(weps) - 1, max(0, curr + delta))
         weps[curr].equipped = True
         weps[curr].move_to_player()
         self.update_display()

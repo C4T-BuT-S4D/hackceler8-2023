@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 from math import floor
 
@@ -19,10 +5,12 @@ import arcade
 import arcade.gui
 import constants
 
-class HeadlessTextObj():
+
+class HeadlessTextObj:
     # Text box objects that don't have any graphical content. Used for server mode.
     def __init__(self, text: str):
         self.text = text
+
 
 class Textbox:
     bg = arcade.load_texture("resources/textbox/bg.png")
@@ -39,14 +27,16 @@ class Textbox:
     LINE_MAX_CHARS = 42
     MAX_LINES = 5
 
-    def __init__(self, is_server: bool, text: str, done_fun, choices=None, free_text_fun=None):
+    def __init__(
+        self, is_server: bool, text: str, done_fun, choices=None, free_text_fun=None
+    ):
         if choices is None:
             choices = []
 
         self.is_server = is_server
         self.lines = self.get_lines(text, choices, free_text_fun)
-        self.remaining_lines = self.lines[self.MAX_LINES:]
-        self.lines = self.lines[:self.MAX_LINES]
+        self.remaining_lines = self.lines[self.MAX_LINES :]
+        self.lines = self.lines[: self.MAX_LINES]
         self.text_objs = self.get_text_objs(self.lines)
         self.done_fun = done_fun
         self.free_text_fun = free_text_fun
@@ -70,7 +60,9 @@ class Textbox:
         self.more_arrow_time = 0
         if not self.is_server:
             self.more_arrow = arcade.load_texture("resources/textbox/more-arrow.png")
-            self.choice_arrow = arcade.load_texture("resources/textbox/choice-arrow.png")
+            self.choice_arrow = arcade.load_texture(
+                "resources/textbox/choice-arrow.png"
+            )
         self.tick([])
 
     def get_lines(self, text: str, choices, free_text_fun) -> list[str]:
@@ -90,8 +82,11 @@ class Textbox:
         diff = end_lines - max_end_lines
         if diff <= 0:
             return lines
-        return lines[:n - self.MAX_LINES] + [""] * (self.MAX_LINES - diff) + lines[
-                                                                             n - self.MAX_LINES:]
+        return (
+            lines[: n - self.MAX_LINES]
+            + [""] * (self.MAX_LINES - diff)
+            + lines[n - self.MAX_LINES :]
+        )
 
     def split_line_if_too_long(self, line: str) -> list[str]:
         line = line.strip()
@@ -112,34 +107,37 @@ class Textbox:
 
     def get_text_objs(self, lines: list[str]):
         text_objs = []
-        for (i, line) in enumerate(lines):
+        for i, line in enumerate(lines):
             if self.is_server:
                 o = HeadlessTextObj(line)
             else:
-                o = arcade.Text(line,
-                                self.TEXT_X,
-                                self.TEXT_Y - self.LINE_DISTANCE * i,
-                                self.TEXT_COLOR,
-                                self.TEXT_SIZE,
-                                font_name=constants.FONT_NAME)
+                o = arcade.Text(
+                    line,
+                    self.TEXT_X,
+                    self.TEXT_Y - self.LINE_DISTANCE * i,
+                    self.TEXT_COLOR,
+                    self.TEXT_SIZE,
+                    font_name=constants.FONT_NAME,
+                )
             text_objs.append(o)
         return text_objs
 
     def get_choice_objs(self, choices):
         choice_objs = []
-        for (i, choice) in enumerate(choices):
+        for i, choice in enumerate(choices):
             text = choice[0]
             if self.is_server:
                 o = HeadlessTextObj(text)
             else:
-                o = arcade.Text(text,
-                                self.TEXT_X + 35,
-                                self.TEXT_Y - self.LINE_DISTANCE * (
-                                    i + self.MAX_LINES - len(
-                                        choices)),
-                                self.TEXT_COLOR,
-                                self.TEXT_SIZE,
-                                font_name=constants.FONT_NAME)
+                o = arcade.Text(
+                    text,
+                    self.TEXT_X + 35,
+                    self.TEXT_Y
+                    - self.LINE_DISTANCE * (i + self.MAX_LINES - len(choices)),
+                    self.TEXT_COLOR,
+                    self.TEXT_SIZE,
+                    font_name=constants.FONT_NAME,
+                )
             choice_objs.append(o)
         return choice_objs
 
@@ -147,20 +145,21 @@ class Textbox:
         l = len(self.lines) + len(self.remaining_lines)
         if self.is_server:
             return HeadlessTextObj("")
-        return arcade.gui.UIInputText(self.TEXT_X,
-                                      self.TEXT_Y - 5 - self.LINE_DISTANCE * (
-                                          l % self.MAX_LINES),
-                                      1200,
-                                      self.TEXT_SIZE + 10,
-                                      "",
-                                      constants.FONT_NAME,
-                                      self.TEXT_SIZE,
-                                      self.TEXT_COLOR)
+        return arcade.gui.UIInputText(
+            self.TEXT_X,
+            self.TEXT_Y - 5 - self.LINE_DISTANCE * (l % self.MAX_LINES),
+            1200,
+            self.TEXT_SIZE + 10,
+            "",
+            constants.FONT_NAME,
+            self.TEXT_SIZE,
+            self.TEXT_COLOR,
+        )
 
     def scroll(self):
         self.t += constants.TICK_S
         chars_to_show = int(floor(self.t * self.CHARS_PER_SECOND))
-        for (i, l) in enumerate(self.text_objs):
+        for i, l in enumerate(self.text_objs):
             l = self.lines[i]
             t = self.text_objs[i]
             if chars_to_show >= len(l):
@@ -185,8 +184,8 @@ class Textbox:
                     # Show next batch of text
                     self.t = 0
                     self.done_scrolling = False
-                    self.lines = self.remaining_lines[:self.MAX_LINES]
-                    self.remaining_lines = self.remaining_lines[self.MAX_LINES:]
+                    self.lines = self.remaining_lines[: self.MAX_LINES]
+                    self.remaining_lines = self.remaining_lines[self.MAX_LINES :]
                     self.text_objs = self.get_text_objs(self.lines)
                 else:
                     # All done, close the textbox
@@ -226,12 +225,18 @@ class Textbox:
             self.draw_more_arrow()
 
     def choices_active(self) -> bool:
-        return self.done_scrolling and len(self.remaining_lines) == 0 and len(
-            self.choice_objs) > 0
+        return (
+            self.done_scrolling
+            and len(self.remaining_lines) == 0
+            and len(self.choice_objs) > 0
+        )
 
     def free_text_active(self) -> bool:
-        return self.done_scrolling and len(self.remaining_lines) == 0 and (
-                    self.free_text_fun is not None)
+        return (
+            self.done_scrolling
+            and len(self.remaining_lines) == 0
+            and (self.free_text_fun is not None)
+        )
 
     def get_close_key(self):
         if self.free_text_active():
@@ -241,16 +246,21 @@ class Textbox:
     def draw_choices(self):
         for c in self.choice_objs:
             c.draw()
-        self.choice_arrow.draw_scaled(42, self.choice_objs[self.selection].y + 17,
-                                      self.BG_SCALE)
+        self.choice_arrow.draw_scaled(
+            42, self.choice_objs[self.selection].y + 17, self.BG_SCALE
+        )
 
     def draw_free_text_input(self):
         self.ui_manager.draw()
         # Draw a border
         arcade.draw_lrtb_rectangle_outline(
-            self.text_input.x - 4, self.text_input.x + self.text_input.width + 4,
-            self.text_input.y + self.text_input.height + 4, self.text_input.y - 4,
-            color=self.TEXT_COLOR, border_width=4)
+            self.text_input.x - 4,
+            self.text_input.x + self.text_input.width + 4,
+            self.text_input.y + self.text_input.height + 4,
+            self.text_input.y - 4,
+            color=self.TEXT_COLOR,
+            border_width=4,
+        )
 
     def draw_more_arrow(self):
         if self.done_scrolling and int(floor(self.more_arrow_time * 2)) % 2 == 0:

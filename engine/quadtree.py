@@ -1,19 +1,6 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
 import uuid
+
 
 class Node:
     def __init__(self, bounds, capacity):
@@ -57,8 +44,9 @@ class Node:
         ne = Node(Bounds(x + w / 2, y, w / 2, h / 2, str(uuid.uuid4())), self.capacity)
 
         sw = Node(Bounds(x, y - h / 2, w / 2, h / 2, str(uuid.uuid4())), self.capacity)
-        se = Node(Bounds(x + w / 2, y - h / 2, w / 2, h / 2, str(uuid.uuid4())),
-                  self.capacity)
+        se = Node(
+            Bounds(x + w / 2, y - h / 2, w / 2, h / 2, str(uuid.uuid4())), self.capacity
+        )
 
         self.children = [nw, ne, sw, se]
         self.divided = True
@@ -96,17 +84,18 @@ class Bounds:
 
     def contains(self, obj):
         res = (
-                # check if in between x extremes
-                obj.x >= self.x and
-                obj.x < self.x + self.w and
-                obj.y <= self.y  and
-                obj.y >= self.y - self.h
+            # check if in between x extremes
+            obj.x >= self.x
+            and obj.x < self.x + self.w
+            and obj.y <= self.y
+            and obj.y >= self.y - self.h
         )
         logging.debug(res)
         return res
 
     def intersects(self, other):
         return intersect(self.rect, other.rect)
+
 
 def intersect(rect1, rect2):
     x0_1, y0_1, x1_1, y1_1 = rect1
@@ -146,9 +135,9 @@ class Quadtree:
 
 def main():
     # Define some sample objects (like game characters or obstacles) as bounds
-    wall1 = Bounds(480, 2704, 16, 16, '1a89ad73-04a7-4f89-9b72-5589bccfb942')
-    wall2 = Bounds(720, 2896, 16, 16, '890c2f8c-ba22-466e-ac26-b1de62387db0')
-    player = Bounds(525.0, 2501.0, 10.0, 10.0, '5bc52efc-e808-40c2-a932-afe6e311f457')
+    wall1 = Bounds(480, 2704, 16, 16, "1a89ad73-04a7-4f89-9b72-5589bccfb942")
+    wall2 = Bounds(720, 2896, 16, 16, "890c2f8c-ba22-466e-ac26-b1de62387db0")
+    player = Bounds(525.0, 2501.0, 10.0, 10.0, "5bc52efc-e808-40c2-a932-afe6e311f457")
 
     # Create a quadtree that covers the entire game space (e.g., 50x50)
     quadtree = Quadtree(Bounds(0, 0, 4800, 6400), capacity=4)
@@ -159,7 +148,7 @@ def main():
     quadtree.insert(player)
 
     # Query a region to find potential collisions
-    region_of_interest = Bounds(757-32, 2794+32, 80, 80)
+    region_of_interest = Bounds(757 - 32, 2794 + 32, 80, 80)
     potential_collisions = quadtree.query(region_of_interest)
 
     # Print the potential collisions
@@ -167,5 +156,6 @@ def main():
     for obj in potential_collisions:
         print(obj.idi)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

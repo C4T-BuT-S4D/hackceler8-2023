@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
 
 from collections import deque
@@ -46,7 +32,9 @@ class Vector(Point):
         return self.npa / np.linalg.norm(self.npa)
 
     def angle(self, other: Vector) -> float:
-        return 180 - np.arccos(np.clip(np.dot(self.unit, other.unit), -1, 1)) * 180 / np.pi
+        return (
+            180 - np.arccos(np.clip(np.dot(self.unit, other.unit), -1, 1)) * 180 / np.pi
+        )
 
     def ortho(self):
         return np.array([-self.y, self.x])
@@ -72,8 +60,10 @@ class Polygon:
         self.outline_array()
 
         if not self.is_convex():
-            logging.error(f"Shape with points {[(i.x, i.y) for i in self.outline]} and angles {self.angles} is not a "
-                          f"polygon")
+            logging.error(
+                f"Shape with points {[(i.x, i.y) for i in self.outline]} and angles {self.angles} is not a "
+                f"polygon"
+            )
 
     def outline_array(self):
         self.outline_npa = np.array([(i.x, i.y) for i in self.outline])
@@ -122,10 +112,18 @@ class Rectangle:
         self.y2 = y2
 
     def collides(self, other: Rectangle):
-        return self.x1 <= other.x2 and self.x2 >= other.x1 and self.y1 <= other.y2 and self.y2 >= other.y1
+        return (
+            self.x1 <= other.x2
+            and self.x2 >= other.x1
+            and self.y1 <= other.y2
+            and self.y2 >= other.y1
+        )
 
     def expand(self, amount):
-        return Rectangle(self.x1-amount, self.x2+amount, self.y1-amount, self.y2+amount)
+        return Rectangle(
+            self.x1 - amount, self.x2 + amount, self.y1 - amount, self.y2 + amount
+        )
+
 
 class Hitbox(Polygon):
     def __init__(self, outline):
@@ -157,7 +155,6 @@ class Hitbox(Polygon):
 
         mpv = min(push_vectors, key=(lambda v: np.dot(v, v)))
 
-
         # assert mpv pushes p1 away from p2
         d = self.centers_displacement(other)  # direction from p1 to p2
         logging.debug(d)
@@ -175,8 +172,8 @@ class Hitbox(Polygon):
         return c2 - c1
 
     def is_separating_axis(self, o: np.array, outline: list[Point]):
-        min1, max1 = float('+inf'), float('-inf')
-        min2, max2 = float('+inf'), float('-inf')
+        min1, max1 = float("+inf"), float("-inf")
+        min2, max2 = float("+inf"), float("-inf")
 
         for p in self.outline:
             proj = np.dot(p.npa, o)
@@ -229,8 +226,12 @@ class Hitbox(Polygon):
         return self.get_rightmost_point() - self.get_leftmost_point()
 
     def get_rect(self):
-        return Rectangle(self.get_leftmost_point(), self.get_rightmost_point(),
-                         self.get_lowest_point(), self.get_highest_point())
+        return Rectangle(
+            self.get_leftmost_point(),
+            self.get_rightmost_point(),
+            self.get_lowest_point(),
+            self.get_highest_point(),
+        )
 
 
 class HitboxCollection:
@@ -260,7 +261,6 @@ class HitboxCollection:
                 tmp = [tmp_el]
                 current_y = tmp_el.get_highest_point()
 
-
         self.polys.append(tmp)
 
         res = []
@@ -272,8 +272,9 @@ class HitboxCollection:
         self.polys = res
 
     def combine_x(self):
-        a = sorted(self.polys, key=lambda x: (x.get_leftmost_point(),
-                                      x.get_highest_point()))
+        a = sorted(
+            self.polys, key=lambda x: (x.get_leftmost_point(), x.get_highest_point())
+        )
         d = deque(a)
         tmp = [d.popleft()]
         current_x = tmp[0].get_leftmost_point()
@@ -315,9 +316,10 @@ class HitboxCollection:
         self.polys = res2
 
     def dump_polys(self):
-
-        logging.debug(f"Reduced polygon size from {self.original_length} --> "
-                     f"{len(self.polys)}")
+        logging.debug(
+            f"Reduced polygon size from {self.original_length} --> "
+            f"{len(self.polys)}"
+        )
         return self.polys
 
     @staticmethod
@@ -328,10 +330,12 @@ class HitboxCollection:
         min_x = min(i.get_leftmost_point() for i in poly)
 
         return Hitbox(
-            [Point(min_x, max_y),
-            Point(max_x, max_y),
-            Point(max_x, min_y),
-            Point(min_x, min_y)]
+            [
+                Point(min_x, max_y),
+                Point(max_x, max_y),
+                Point(max_x, min_y),
+                Point(min_x, min_y),
+            ]
         )
 
 
@@ -340,45 +344,67 @@ def main():
     p2 = Hitbox([Point(1, 0), Point(1, 1), Point(0, 0)])
     p3 = Hitbox([Point(3, 0), Point(2, 1), Point(2, 0)])
 
-    r1 = Hitbox([
-        Point(0,0),
-        Point(0,3),
-        Point(3,3),
-        Point(3,0),
-    ])
-    r2 = Hitbox([
-        Point(2,2),
-        Point(2,5),
-        Point(5,5),
-        Point(5,2),
-    ])
+    r1 = Hitbox(
+        [
+            Point(0, 0),
+            Point(0, 3),
+            Point(3, 3),
+            Point(3, 0),
+        ]
+    )
+    r2 = Hitbox(
+        [
+            Point(2, 2),
+            Point(2, 5),
+            Point(5, 5),
+            Point(5, 2),
+        ]
+    )
 
-    r3 = Hitbox([
-        Point(1,2),
-        Point(1,5),
-        Point(2,5),
-        Point(2,2),
-    ])
+    r3 = Hitbox(
+        [
+            Point(1, 2),
+            Point(1, 5),
+            Point(2, 5),
+            Point(2, 2),
+        ]
+    )
 
-    r4 = Hitbox([
-        Point(2,1),
-        Point(2,2),
-        Point(5,2),
-        Point(5,1),
-    ])
+    r4 = Hitbox(
+        [
+            Point(2, 1),
+            Point(2, 2),
+            Point(5, 2),
+            Point(5, 1),
+        ]
+    )
 
-    r5 = Hitbox([
-        Point(-2,1),
-        Point(-2,2),
-        Point(1,2),
-        Point(1,1),
-    ])
+    r5 = Hitbox(
+        [
+            Point(-2, 1),
+            Point(-2, 2),
+            Point(1, 2),
+            Point(1, 1),
+        ]
+    )
 
-    p4 = Hitbox([Point(56.3333, 72.3333), Point(66.33330000000001, 72.3333),
-                 Point(66.33330000000001, 82.3333), Point(56.3333, 82.3333)])
+    p4 = Hitbox(
+        [
+            Point(56.3333, 72.3333),
+            Point(66.33330000000001, 72.3333),
+            Point(66.33330000000001, 82.3333),
+            Point(56.3333, 82.3333),
+        ]
+    )
 
-    p5 = Hitbox([Point(96.0, 96.0), Point(304.0, 96.0),
-                 Point(304.0, 302.66700000000003), Point(96.0, 302.66700000000003)])
+    p5 = Hitbox(
+        [
+            Point(96.0, 96.0),
+            Point(304.0, 96.0),
+            Point(304.0, 302.66700000000003),
+            Point(96.0, 302.66700000000003),
+        ]
+    )
 
     print(p1.collides(p2))
     print(p1.collides(p3))
@@ -395,7 +421,7 @@ def main():
     print(r1.collides(r4))
     print(r1.collides(r5))
 
-    s = '''Hitbox([Point(16, 288), Point(32, 288), Point(32, 272), Point(16, 272)])
+    s = """Hitbox([Point(16, 288), Point(32, 288), Point(32, 272), Point(16, 272)])
             Hitbox([Point(32, 288), Point(48, 288), Point(48, 272), Point(32, 272)])
             Hitbox([Point(48, 288), Point(64, 288), Point(64, 272), Point(48, 272)])
             Hitbox([Point(64, 288), Point(80, 288), Point(80, 272), Point(64, 272)])
@@ -456,7 +482,9 @@ def main():
             Hitbox([Point(240, 64), Point(256, 64), Point(256, 48), Point(240, 48)])
             Hitbox([Point(256, 64), Point(272, 64), Point(272, 48), Point(256, 48)])
             Hitbox([Point(272, 64), Point(288, 64), Point(288, 48), Point(272, 48)])
-            Hitbox([Point(288, 64), Point(304, 64), Point(304, 48), Point(288, 48)])'''.split('\n')
+            Hitbox([Point(288, 64), Point(304, 64), Point(304, 48), Point(288, 48)])""".split(
+        "\n"
+    )
 
     s = [eval(i) for i in s]
 
@@ -471,18 +499,22 @@ def main():
     h.combine_x()
     print(h.polys)
 
-    rt1 = Hitbox([
-        Point(0, 0),
-        Point(0, 1),
-        Point(1, 1),
-        Point(1, 0),
-    ])
-    rt2 = Hitbox([
-        Point(0, 1),
-        Point(0, 2),
-        Point(1, 2),
-        Point(1, 1),
-    ])
+    rt1 = Hitbox(
+        [
+            Point(0, 0),
+            Point(0, 1),
+            Point(1, 1),
+            Point(1, 0),
+        ]
+    )
+    rt2 = Hitbox(
+        [
+            Point(0, 1),
+            Point(0, 2),
+            Point(1, 2),
+            Point(1, 1),
+        ]
+    )
 
     print("============== Test 2 ==================")
     h = HitboxCollection([rt1, rt2])
@@ -496,5 +528,6 @@ def main():
 
     print(h.dump_polys())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -1,17 +1,3 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from copy import copy
 from enum import Enum
 import json
@@ -32,7 +18,7 @@ PLAYER_MOVEMENT = 16 * 10
 
 GRAVITY = 1
 
-PLATFORMER_TILE_SCALING = 1.0
+PLATFORMER_TILE_SCALING = 1.0 / 2
 
 
 class GameMode(Enum):
@@ -51,7 +37,7 @@ COLOR_LIST = [
 ]
 
 
-class Ludicer():
+class Ludicer:
     def __init__(self, net, is_server, rand_seed=1298472982523, debug=True):
         self.net = net
         self.is_server = is_server
@@ -73,14 +59,14 @@ class Ludicer():
             "rusty": GameMode.MODE_PLATFORMER,
             "space": GameMode.MODE_PLATFORMER,
             "water": GameMode.MODE_PLATFORMER,
-            "debug": GameMode.MODE_PLATFORMER
+            "debug": GameMode.MODE_PLATFORMER,
         }
 
         self.arena_mapping = {
             "purple_arena": "cctv",
             "red_arena": "rusty",
             "violet_arena": "space",
-            "orange_arena": "water"
+            "orange_arena": "water",
         }
 
         # variable stuff
@@ -130,20 +116,16 @@ class Ludicer():
             arcade.key.A,
             arcade.key.S,
             arcade.key.D,
-
             # running
             arcade.key.LSHIFT,
-
             # Menu
             arcade.key.ESCAPE,
             arcade.key.R,
             arcade.key.I,
             arcade.key.P,
-
             # NPC
             arcade.key.E,
             arcade.key.ENTER,
-
             # Weapons
             arcade.key.SPACE,
         ]
@@ -153,8 +135,13 @@ class Ludicer():
 
     def dump_state(self):
         h = ""
-        for i in self.objects + self.static_objs + \
-                 self.dynamic_artifacts + [self.player] + self.items:
+        for i in (
+            self.objects
+            + self.static_objs
+            + self.dynamic_artifacts
+            + [self.player]
+            + self.items
+        ):
             h += i.hash
         h += xxhash.xxh64(str(self.tics)).hexdigest()
         self.state_hash = xxhash.xxh64(h.encode()).hexdigest()
@@ -194,21 +181,22 @@ class Ludicer():
         self.switch_maps(self.current_map)
 
     def setup_scroller(self):
-
-        self.tiled_map, self.tiled_map_background = self.maps_dict[self.current_map][
-                                                    :2]
-        logging.debug(
-            f"Loaded map {self.current_map} with {self.tiled_map.size},  (tile width:{self.tiled_map.tile_size}, total size: {self.tiled_map.map_size_pixels})")
+        self.tiled_map, self.tiled_map_background = self.maps_dict[self.current_map][:2]
+        logging.info(
+            f"Loaded map {self.current_map} with {self.tiled_map.size},  (tile width:{self.tiled_map.tile_size}, total size: {self.tiled_map.map_size_pixels})"
+        )
         for o in self.tiled_map.dynamic_artifacts:
             self.dynamic_artifacts.append(o)
 
         self.combat_system = CombatSystem(self.tiled_map.weapons)
 
         for o in self.tiled_map.objs:
-
             if o.nametype == "Player":
                 logging.debug("Have player")
-                if self.current_map == "base" and self.player_last_base_position is not None:
+                if (
+                    self.current_map == "base"
+                    and self.player_last_base_position is not None
+                ):
                     x, y = self.player_last_base_position
                     o.place_at(x, y)
                 elif self.current_map in self.player_starting_position:
@@ -228,8 +216,11 @@ class Ludicer():
 
         self.physics_engine = physics.PhysicsEngine(
             platformer_rules=(self.current_mode == GameMode.MODE_PLATFORMER),
-            objects=[self.player] + self.objects, qt=self.tiled_map.qt,
-            obj_map=self.tiled_map.obj_map, static_objects=self.static_objs)
+            objects=[self.player] + self.objects,
+            qt=self.tiled_map.qt,
+            obj_map=self.tiled_map.obj_map,
+            static_objects=self.static_objs,
+        )
         self.physics_engine.env_tiles = self.tiled_map.env_tiles
         self.physics_engine.moving_platforms = self.tiled_map.moving_platforms
 
@@ -241,8 +232,7 @@ class Ludicer():
 
     def switch_maps(self, new_map):
         if self.current_map == "base" and self.current_map != new_map:
-            self.player_last_base_position = (self.player.prev_x, \
-                                              self.player.prev_y)
+            self.player_last_base_position = (self.player.prev_x, self.player.prev_y)
         self.current_map = new_map
         logging.debug(self.current_map)
 
@@ -264,8 +254,9 @@ class Ludicer():
             if arcade.key.E in self.newly_pressed_keys:
                 self.newly_pressed_keys.remove(arcade.key.E)
 
-        self.textbox = textbox.Textbox(self.is_server, text, cleanup, choices,
-                                       free_text_fun)
+        self.textbox = textbox.Textbox(
+            self.is_server, text, cleanup, choices, free_text_fun
+        )
 
     def objects_frozen(self):
         return self.map_switch is not None or self.textbox is not None
@@ -273,15 +264,21 @@ class Ludicer():
     def send_game_info(self):
         if self.net is not None:
             logging.debug(f"{self.tics} : {self.pressed_keys}")
-            msg = json.dumps({"tics": self.tics, "state": self.state_hash,
-                              "keys": list(self.pressed_keys),
-                              "text_input": self.get_text_input()}).encode()
+            msg = json.dumps(
+                {
+                    "tics": self.tics,
+                    "state": self.state_hash,
+                    "keys": list(self.pressed_keys),
+                    "text_input": self.get_text_input(),
+                }
+            ).encode()
             self.net.send_one(msg)
 
     def get_text_input(self):
         if self.is_server:
             logging.error(
-                "Called get_text_input on server, should only be used on client")
+                "Called get_text_input on server, should only be used on client"
+            )
             return
         if self.textbox is None or self.textbox.text_input is None:
             return None
@@ -290,7 +287,8 @@ class Ludicer():
     def set_text_input(self, text):
         if not self.is_server:
             logging.error(
-                "Called set_text_input on client, should only be used on server")
+                "Called set_text_input on client, should only be used on server"
+            )
             return
         if self.textbox is None or self.textbox.text_input is None:
             return
@@ -334,9 +332,11 @@ class Ludicer():
         for o in self.objects:
             o.tick()
         if self.player is not None:
-            self.player.tick(self.pressed_keys,
-                             self.newly_pressed_keys,
-                             reset_speed=(self.current_mode == GameMode.MODE_SCROLLER))
+            self.player.tick(
+                self.pressed_keys,
+                self.newly_pressed_keys,
+                reset_speed=(self.current_mode == GameMode.MODE_SCROLLER),
+            )
 
         for ac in self.combat_system.active_projectiles:
             ac.tick()
@@ -380,8 +380,10 @@ class Ludicer():
                             self.switch_maps(self.arena_mapping[o.name])
                             return
 
-                        logging.warning(f"Arena {o.name} is not associated with \
-                                                    any maps, r u cheating?")
+                        logging.warning(
+                            f"Arena {o.name} is not associated with \
+                                                    any maps, r u cheating?"
+                        )
 
                     case "ExitArea":
                         logging.debug(f"Player collided with {o.name}")

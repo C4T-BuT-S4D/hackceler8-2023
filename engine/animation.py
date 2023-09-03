@@ -1,25 +1,12 @@
 import logging
 
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import pytiled_parser
 
 import constants
 
 
 BLINK_SPEED = 100
+
 
 class Animation:
     def __init__(self, name: str, blinking: bool, tiles, textures):
@@ -53,24 +40,24 @@ class Animation:
         self.last_time = self.frame_starts[-1] + self.frames[-1].duration
 
     def tick(self):
-        self.cur_time += constants.TICK_S*1000
+        self.cur_time += constants.TICK_S * 1000
         next_frame = self.cur_frame + 1
         try:
             if next_frame >= len(self.frames):
                 if self.loop:
-                    if self.cur_time < self.last_time: # Last frame not done yet
+                    if self.cur_time < self.last_time:  # Last frame not done yet
                         return
                     next_frame = 0
                     self.cur_time -= self.last_time
                 else:
-                    return # Freeze at the last frame
+                    return  # Freeze at the last frame
             if self.frame_starts[next_frame] <= self.cur_time:
                 self.cur_frame = next_frame
         except Exception as e:
             logging.error(f"Error during animation: {e}")
 
     def draw(self, x, y, scale=1.0):
-        if self.blinking and (self.cur_time//BLINK_SPEED)%2 == 0:
+        if self.blinking and (self.cur_time // BLINK_SPEED) % 2 == 0:
             return
         self.textures[int(self.frames[self.cur_frame].tile_id)].draw_scaled(x, y, scale)
 
