@@ -15,7 +15,7 @@ class GenericObject(hitbox.Hitbox):
         self,
         coords: hitbox.Point,
         nametype: str,
-        tileset_path: str,
+        tileset_path: str | None,
         outline: list[hitbox.Point] = None,
         name: str = None,
         can_flip: bool = False,

@@ -3,7 +3,9 @@ import logging
 import arcade
 from arcade import gui
 from pyglet.image import load as pyglet_load
+from pyglet.math import Vec2
 
+import cheats.astar
 import constants
 import ludicer
 
@@ -16,6 +18,9 @@ class QuitButton(arcade.gui.UIFlatButton):
 
 
 class Hackceler8(arcade.Window):
+    camera: arcade.Camera | None
+    gui_camera: arcade.Camera | None
+
     def __init__(self, net):
         arcade.load_font("resources/textbox/Pixel.ttf")
         self.SCREEN_WIDTH = constants.SCREEN_WIDTH
@@ -32,6 +37,8 @@ class Hackceler8(arcade.Window):
         # GUI management
         self.main_menu_manager = gui.UIManager()
         self.main_menu_manager.enable()
+
+        self.force_next_keys = []
 
         self.camera = None
         self.gui_camera = None  # For stationary objects.
@@ -84,7 +91,7 @@ class Hackceler8(arcade.Window):
         self.game = ludicer.Ludicer(self.net, is_server=False)
 
     # This method is automatically called when the window is resized.
-    def on_resize(self, width, height):
+    def on_resize(self, width: int, height: int):
         self.camera.resize(width, height)
         self.gui_camera.resize(width, height)
 
@@ -113,7 +120,7 @@ class Hackceler8(arcade.Window):
         # screen_center_x = min(screen_center_x, max_screen_center_x)
         # screen_center_y = min(screen_center_y, max_screen_center_y)
 
-        player_centered = screen_center_x, screen_center_y
+        player_centered = Vec2(screen_center_x, screen_center_y)
         self.camera.move_to(player_centered)
 
     def on_draw(self):
@@ -225,7 +232,27 @@ class Hackceler8(arcade.Window):
     def on_update(self, _delta_time: float):
         if self.game is None:
             return
-        self.game.tick()
+
+        if self.force_next_keys:
+            for keys in self.force_next_keys:
+                self.game.pressed_keys = {arcade.key.LSHIFT}
+                for c in keys:
+                    match c:
+                        case "A":
+                            self.game.pressed_keys.add(arcade.key.A)
+                        case "D":
+                            self.game.pressed_keys.add(arcade.key.D)
+                        case "W":
+                            self.game.pressed_keys.add(arcade.key.W)
+                        case _:
+                            logging.fatal("unknown key %s", c)
+                self.game.tick()
+
+            self.force_next_keys = self.force_next_keys[:0]
+            self.game.pressed_keys = set()
+        else:
+            self.game.tick()
+
         self.center_camera_to_player()
 
     def on_key_press(self, symbol: int, _modifiers: int):
@@ -243,3 +270,37 @@ class Hackceler8(arcade.Window):
             return
         if symbol in self.game.tracked_keys and symbol in self.game.pressed_keys:
             self.game.pressed_keys.remove(symbol)
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        if self.game is None:
+            return
+
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            player = self.game.player
+
+            target_x = x + self.camera.position.x
+            target_y = y + self.camera.position.y
+
+            logging.info(
+                "mouse pressed at (%s, %s), player pos: (%s, %s), target: (%s, %s)",
+                x,
+                y,
+                player.x,
+                player.y,
+                target_x,
+                target_y,
+            )
+            initial_state = cheats.astar.State(
+                ticks=0,
+                player_state=cheats.astar.optimized_physics.PlayerState(
+                    x=player.x,
+                    y=player.y,
+                    x_speed=0,
+                    y_speed=0,
+                    in_the_air=False,
+                ),
+            )
+            pf = cheats.astar.PathFinder(initial_state, self.game.tiled_map.static_objs)
+            if (res := pf.search(target_x, target_y)) is not None:
+                self.force_next_keys = res.tick_keys
+                return
