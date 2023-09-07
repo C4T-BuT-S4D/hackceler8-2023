@@ -38,7 +38,7 @@ class PathFinder:
             if iter % 1000 == 0:
                 print("iter: ", iter)
                 if time.time() - start > 10:
-                    print('search timed out')
+                    print("search timed out")
                     break
 
             _, state = self.states.pop(0)

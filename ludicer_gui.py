@@ -298,10 +298,7 @@ class Hackceler8(arcade.Window):
             static_state = cheats_rust.StaticState(
                 objects=[
                     cheats_rust.Hitbox(
-                        outline=[
-                            cheats_rust.Pointf(x=p.x, y=p.y)
-                            for p in o.outline
-                        ]
+                        outline = [cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline]
                     )
                     for o in self.game.tiled_map.static_objs
                 ]
@@ -310,10 +307,15 @@ class Hackceler8(arcade.Window):
                 player=cheats_rust.PlayerState(x=target_x, y=target_y)
             )
             start = time.time()
-            path = cheats_rust.astar_search(initial_state=initial_state, target_state=target_state, static_state=static_state)
-            print('search time', time.time() - start)
+            path = cheats_rust.astar_search(
+                initial_state=initial_state,
+                target_state=target_state,
+                static_state=static_state,
+                timeout=5,
+            )
+            print("search time", time.time() - start)
             if not path:
-                print('Path not found')
+                print("Path not found")
             else:
                 self.force_next_keys = []
                 for move in path:
@@ -331,20 +333,5 @@ class Hackceler8(arcade.Window):
                         case cheats_rust.Move.NONE:
                             self.force_next_keys.append(set())
                         case _:
-                            print('unknown move', move)
-                print('path found', path, self.force_next_keys)
-
-            # initial_state = cheats.astar.State(
-            #     ticks=0,
-            #     player_state=cheats.astar.optimized_physics.PlayerState(
-            #         x=player.x,
-            #         y=player.y,
-            #         x_speed=0,
-            #         y_speed=0,
-            #         in_the_air=False,
-            #     ),
-            # )
-            # pf = cheats.astar.PathFinder(initial_state, self.game.tiled_map.static_objs)
-            # if (res := pf.search(target_x, target_y)) is not None:
-            #     self.force_next_keys = res.tick_keys
-            #     return
+                            print("unknown move", move)
+                print("path found", path, self.force_next_keys)

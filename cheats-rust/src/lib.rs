@@ -514,7 +514,7 @@ impl PartialEq for PhysState {
     fn eq(&self, other: &Self) -> bool {
         self.player.x == other.player.x
             && self.player.y == other.player.y
-            && self.player.vx == other.player.vx
+            // && self.player.vx == other.player.vx
             && self.player.vy == other.player.vy
     }
 }
@@ -525,7 +525,7 @@ impl Hash for PhysState {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.player.x.to_le_bytes());
         state.write(&self.player.y.to_le_bytes());
-        state.write(&self.player.vx.to_le_bytes());
+        // state.write(&self.player.vx.to_le_bytes());
         state.write(&self.player.vy.to_le_bytes());
     }
 }
@@ -569,6 +569,9 @@ impl PartialOrd for SearchNode {
 }
 
 fn heuristic(target_state: &PlayerState, current_state: &PlayerState) -> f64 {
+    // let xticks = (target_state.x - current_state.x).abs() / (PLAYER_MOVEMENT_SPEED * 1.5 * TICK_S);
+    // let yticks = (target_state.y - current_state.y).abs() / (PLAYER_JUMP_SPEED * TICK_S);
+    // f64::max(xticks, yticks) * HEURISTIC_WEIGHT
     (target_state.center() - current_state.center()).len() * HEURISTIC_WEIGHT
 }
 
@@ -577,6 +580,7 @@ fn astar_search(
     initial_state: PhysState,
     target_state: PhysState,
     static_state: StaticState,
+    timeout: u64,
 ) -> Option<Vec<Move>> {
     let mut open_set = BinaryHeap::new();
     let mut came_from: HashMap<PhysState, (PhysState, Move)> = HashMap::new();
@@ -603,7 +607,7 @@ fn astar_search(
         iter += 1;
         if iter % 10000 == 0 {
             println!("iter: {iter}");
-            if start.elapsed().unwrap().as_secs() > 5 {
+            if start.elapsed().unwrap().as_secs() > timeout {
                 break;
             }
         }
@@ -616,6 +620,12 @@ fn astar_search(
             if neighbor_state.close_enough(&target_state) {
                 let mut moves = reconstruct_path(&came_from, state);
                 moves.push(next_move);
+                println!(
+                    "found path: iter={:?}; ticks={:?}; elapsed={:?}",
+                    iter,
+                    ticks + 1,
+                    start.elapsed().unwrap().as_secs_f32()
+                );
                 return Some(moves);
             }
 
