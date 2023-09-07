@@ -37,7 +37,7 @@ class PathFinder:
             iter += 1
             if iter % 1000 == 0:
                 print("iter: ", iter)
-                if time.time() - start > 5:
+                if time.time() - start > 10:
                     print('search timed out')
                     break
 
@@ -49,7 +49,7 @@ class PathFinder:
 
             # print("state: ", state, "target: ", x, y)
 
-            found = False
+            found = Falsepy
             for move in ["A", "D", "WA", "WD", "W", ""]:
                 if (res := self.process((x, y), state, set(move))) is not None:
                     found = True

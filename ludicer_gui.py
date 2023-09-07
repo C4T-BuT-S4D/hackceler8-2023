@@ -1,11 +1,12 @@
 import logging
+import time
 
 import arcade
 from arcade import gui
 from pyglet.image import load as pyglet_load
 from pyglet.math import Vec2
+import cheats_rust
 
-import cheats.astar
 import constants
 import ludicer
 
@@ -234,7 +235,7 @@ class Hackceler8(arcade.Window):
             return
 
         if self.force_next_keys:
-            for keys in self.force_next_keys:
+            for keys in self.force_next_keys[:1]:
                 self.game.pressed_keys = {arcade.key.LSHIFT}
                 for c in keys:
                     match c:
@@ -248,7 +249,7 @@ class Hackceler8(arcade.Window):
                             logging.fatal("unknown key %s", c)
                 self.game.tick()
 
-            self.force_next_keys = self.force_next_keys[:0]
+            self.force_next_keys = self.force_next_keys[1:]
             self.game.pressed_keys = set()
         else:
             self.game.tick()
@@ -290,17 +291,60 @@ class Hackceler8(arcade.Window):
                 target_x,
                 target_y,
             )
-            initial_state = cheats.astar.State(
-                ticks=0,
-                player_state=cheats.astar.optimized_physics.PlayerState(
-                    x=player.x,
-                    y=player.y,
-                    x_speed=0,
-                    y_speed=0,
-                    in_the_air=False,
-                ),
+
+            initial_state = cheats_rust.PhysState(
+                player=cheats_rust.PlayerState(x=player.x, y=player.y)
             )
-            pf = cheats.astar.PathFinder(initial_state, self.game.tiled_map.static_objs)
-            if (res := pf.search(target_x, target_y)) is not None:
-                self.force_next_keys = res.tick_keys
-                return
+            static_state = cheats_rust.StaticState(
+                objects=[
+                    cheats_rust.Hitbox(
+                        outline=[
+                            cheats_rust.Pointf(x=p.x, y=p.y)
+                            for p in o.outline
+                        ]
+                    )
+                    for o in self.game.tiled_map.static_objs
+                ]
+            )
+            target_state = cheats_rust.PhysState(
+                player=cheats_rust.PlayerState(x=target_x, y=target_y)
+            )
+            start = time.time()
+            path = cheats_rust.astar_search(initial_state=initial_state, target_state=target_state, static_state=static_state)
+            print('search time', time.time() - start)
+            if not path:
+                print('Path not found')
+            else:
+                self.force_next_keys = []
+                for move in path:
+                    match move:
+                        case cheats_rust.Move.W:
+                            self.force_next_keys.append({"W"})
+                        case cheats_rust.Move.A:
+                            self.force_next_keys.append({"A"})
+                        case cheats_rust.Move.D:
+                            self.force_next_keys.append({"D"})
+                        case cheats_rust.Move.WA:
+                            self.force_next_keys.append({"W", "A"})
+                        case cheats_rust.Move.WD:
+                            self.force_next_keys.append({"W", "D"})
+                        case cheats_rust.Move.NONE:
+                            self.force_next_keys.append(set())
+                        case _:
+                            print('unknown move', move)
+                print('path found', path, self.force_next_keys)
+
+            # initial_state = cheats.astar.State(
+            #     ticks=0,
+            #     player_state=cheats.astar.optimized_physics.PlayerState(
+            #         x=player.x,
+            #         y=player.y,
+            #         x_speed=0,
+            #         y_speed=0,
+            #         in_the_air=False,
+            #     ),
+            # )
+            # pf = cheats.astar.PathFinder(initial_state, self.game.tiled_map.static_objs)
+            # if (res := pf.search(target_x, target_y)) is not None:
+            #     self.force_next_keys = res.tick_keys
+            #     return

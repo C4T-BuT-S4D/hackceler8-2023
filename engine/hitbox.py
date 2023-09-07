@@ -8,7 +8,6 @@ import arcade
 import numpy as np
 import xxhash
 
-
 BASIC_SHAPES = {
     3: "TRIANGLE",
     4: "RECTANGLE",
@@ -137,9 +136,6 @@ class Hitbox(Polygon):
         arcade.draw_polygon_outline(self.outline_npa, arcade.color.RED)
 
     def collides(self, other: Hitbox):
-        edges = self.edges
-        edges += other.edges
-
         orths = [i.orthogonal for i in self.vectors]
         orths += [i.orthogonal for i in other.vectors]
 
