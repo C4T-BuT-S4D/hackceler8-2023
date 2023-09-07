@@ -162,7 +162,8 @@ impl Polygon {
     fn get_angles(&mut self) {
         self.angles.clear();
         for i in 0..self.vectors.len() {
-            self.angles.push(self.vectors[i].angle(&self.vectors[(i + 1) % self.vectors.len()]));
+            self.angles
+                .push(self.vectors[i].angle(&self.vectors[(i + 1) % self.vectors.len()]));
         }
     }
 
@@ -201,10 +202,10 @@ impl PartialEq for Polygon {
     fn eq(&self, other: &Self) -> bool {
         self.outline.len() == other.outline.len()
             && self
-            .outline
-            .iter()
-            .zip(other.outline.iter())
-            .all(|(a, b)| a.x == b.x && a.y == b.y)
+                .outline
+                .iter()
+                .zip(other.outline.iter())
+                .all(|(a, b)| a.x == b.x && a.y == b.y)
     }
 }
 
@@ -470,15 +471,11 @@ impl PhysState {
         let py = self.player.y;
 
         for o1 in &state.objects {
-            if o1.polygon.leftmost_point > px + 16.0
-                || o1.polygon.rightmost_point < px - 16.0
-            {
+            if o1.polygon.leftmost_point > px + 16.0 || o1.polygon.rightmost_point < px - 16.0 {
                 continue;
             }
 
-            if o1.polygon.lowest_point > py + 16.0
-                || o1.polygon.highest_point < py - 16.0
-            {
+            if o1.polygon.lowest_point > py + 16.0 || o1.polygon.highest_point < py - 16.0 {
                 continue;
             }
 
@@ -594,10 +591,10 @@ fn astar_search(
     let start = SystemTime::now();
     let mut iter = 0;
     while let Some(SearchNode {
-                       cost: _,
-                       ticks,
-                       state,
-                   }) = open_set.pop()
+        cost: _,
+        ticks,
+        state,
+    }) = open_set.pop()
     {
         if *g_score.get(&state).unwrap() < ticks {
             continue;
