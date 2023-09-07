@@ -293,18 +293,30 @@ class Hackceler8(arcade.Window):
             )
 
             initial_state = cheats_rust.PhysState(
-                player=cheats_rust.PlayerState(x=player.x, y=player.y)
+                player=cheats_rust.PlayerState(
+                    x=player.x,
+                    y=player.y,
+                    vx=player.x_speed,
+                    vy=player.y_speed,
+                    in_the_air=player.in_the_air,
+                )
             )
             static_state = cheats_rust.StaticState(
                 objects=[
                     cheats_rust.Hitbox(
-                        outline = [cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline]
+                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline]
                     )
                     for o in self.game.tiled_map.static_objs
                 ]
             )
             target_state = cheats_rust.PhysState(
-                player=cheats_rust.PlayerState(x=target_x, y=target_y)
+                player=cheats_rust.PlayerState(
+                    x=target_x,
+                    y=target_y,
+                    vx=0,
+                    vy=0,
+                    in_the_air=False,
+                )
             )
             start = time.time()
             path = cheats_rust.astar_search(

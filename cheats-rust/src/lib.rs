@@ -334,13 +334,13 @@ struct PlayerState {
 #[pymethods]
 impl PlayerState {
     #[new]
-    fn new(x: f64, y: f64) -> Self {
+    fn new(x: f64, y: f64, vx: f64, vy: f64, in_the_air: bool) -> Self {
         PlayerState {
             x,
             y,
-            vx: 0.0,
-            vy: 0.0,
-            in_the_air: false,
+            vx,
+            vy,
+            in_the_air,
         }
     }
 }
