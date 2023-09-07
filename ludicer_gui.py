@@ -1,5 +1,4 @@
 import logging
-import time
 
 import arcade
 from arcade import gui
@@ -40,6 +39,7 @@ class Hackceler8(arcade.Window):
         self.main_menu_manager.enable()
 
         self.force_next_keys = []
+        self.force_next_keys_per_frame = 1
 
         self.camera = None
         self.gui_camera = None  # For stationary objects.
@@ -235,7 +235,7 @@ class Hackceler8(arcade.Window):
             return
 
         if self.force_next_keys:
-            for keys in self.force_next_keys[:1]:
+            for keys in self.force_next_keys[:self.force_next_keys_per_frame]:
                 self.game.pressed_keys = {arcade.key.LSHIFT}
                 for c in keys:
                     match c:
@@ -249,7 +249,7 @@ class Hackceler8(arcade.Window):
                             logging.fatal("unknown key %s", c)
                 self.game.tick()
 
-            self.force_next_keys = self.force_next_keys[1:]
+            self.force_next_keys = self.force_next_keys[self.force_next_keys_per_frame:]
             self.game.pressed_keys = set()
         else:
             self.game.tick()
@@ -276,7 +276,7 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if button == arcade.MOUSE_BUTTON_LEFT:
+        if button == arcade.MOUSE_BUTTON_LEFT and modifiers & arcade.key.MOD_CTRL:
             player = self.game.player
 
             target_x = x + self.camera.position.x
@@ -318,14 +318,17 @@ class Hackceler8(arcade.Window):
                     in_the_air=False,
                 )
             )
-            start = time.time()
+
+            timeout = 5
+            if modifiers & arcade.key.MOD_ALT or modifiers & arcade.key.MOD_OPTION:
+                timeout = 30
+
             path = cheats_rust.astar_search(
                 initial_state=initial_state,
                 target_state=target_state,
                 static_state=static_state,
-                timeout=5,
+                timeout=timeout,
             )
-            print("search time", time.time() - start)
             if not path:
                 print("Path not found")
             else:
@@ -347,3 +350,8 @@ class Hackceler8(arcade.Window):
                         case _:
                             print("unknown move", move)
                 print("path found", path, self.force_next_keys)
+
+                if modifiers & arcade.key.MOD_SHIFT:
+                    self.force_next_keys_per_frame = 1
+                else:
+                    self.force_next_keys_per_frame = len(self.force_next_keys)
