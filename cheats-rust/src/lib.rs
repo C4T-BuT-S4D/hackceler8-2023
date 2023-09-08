@@ -31,6 +31,13 @@ impl Pointf {
 }
 
 impl Pointf {
+    unsafe fn fast_cmp(&self, other: &Self) -> bool {
+        unsafe {
+            std::mem::transmute::<Self, [u8; 16]>(*self)
+                == std::mem::transmute::<Self, [u8; 16]>(*other)
+        }
+    }
+
     fn unit_vector(&self) -> Pointf {
         *self / self.len()
     }
@@ -205,7 +212,7 @@ impl PartialEq for Polygon {
                 .outline
                 .iter()
                 .zip(other.outline.iter())
-                .all(|(a, b)| a.x == b.x && a.y == b.y)
+                .all(|(a, b)| unsafe { a.fast_cmp(b) })
     }
 }
 
@@ -217,7 +224,7 @@ struct Hitbox {
 
 impl PartialEq for Hitbox {
     fn eq(&self, other: &Self) -> bool {
-        return self.polygon == other.polygon;
+        self.polygon == other.polygon
     }
 }
 
