@@ -50,6 +50,9 @@ class Hackceler8(arcade.Window):
         self.main_menu_manager = gui.UIManager()
         self.main_menu_manager.enable()
 
+        self.force_next_keys = []
+        self.force_next_keys_per_frame = 1
+
         self.camera = None
         self.gui_camera = None  # For stationary objects.
 
@@ -372,7 +375,7 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if button == arcade.MOUSE_BUTTON_LEFT:
+        if button == arcade.MOUSE_BUTTON_LEFT and modifiers & arcade.key.MOD_CTRL:
             player = self.game.player
 
             target_x = x + self.camera.position.x
@@ -446,3 +449,8 @@ class Hackceler8(arcade.Window):
                         case _:
                             print("unknown move", move)
                 print("path found", path, self.force_next_keys)
+
+                if modifiers & arcade.key.MOD_SHIFT:
+                    self.force_next_keys_per_frame = 1
+                else:
+                    self.force_next_keys_per_frame = len(self.force_next_keys)
