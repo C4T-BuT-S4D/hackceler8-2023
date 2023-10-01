@@ -15,6 +15,9 @@ const GRAVITY_CONSTANT: f64 = 6.0;
 const HEURISTIC_WEIGHT: f64 = 5.0;
 const TARGET_PRECISION: f64 = 16.0;
 
+const PUSH_DELTA: f64 = 125.0;
+const PUSH_SPEED: f64 = 2500.0;
+
 #[derive(Copy, Clone, Debug)]
 #[pyclass]
 struct Pointf {
@@ -139,11 +142,6 @@ impl Polygon {
 }
 
 impl Polygon {
-    fn update(&mut self, new_outline: Vec<Pointf>) {
-        self.outline = new_outline;
-        self.init();
-    }
-
     fn init(&mut self) {
         self.get_vectors();
         self.get_angles();
@@ -266,6 +264,19 @@ impl Hitbox {
         Some(mpv)
     }
 
+    fn collides_as_rect(&self, other: &Hitbox) -> bool {
+        debug_assert!(self.polygon.outline.len() == 4);
+        debug_assert!(other.polygon.outline.len() == 4);
+
+        let (sx1, sx2) = (self.polygon.leftmost_point, self.polygon.rightmost_point);
+        let (sy1, sy2) = (self.polygon.lowest_point, self.polygon.highest_point);
+
+        let (ox1, ox2) = (other.polygon.leftmost_point, other.polygon.rightmost_point);
+        let (oy1, oy2) = (other.polygon.lowest_point, other.polygon.highest_point);
+
+        return sx1 <= ox2 && sx2 >= ox1 && sy1 <= oy2 && sy2 >= oy1;
+    }
+
     fn centers_displacement(&self, other: &Hitbox) -> Pointf {
         other.polygon.center - self.polygon.center
     }
@@ -302,8 +313,8 @@ impl Hitbox {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone, Hash)]
 #[pyclass]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Hash)]
 enum Move {
     NONE,
     A,
@@ -311,13 +322,73 @@ enum Move {
     W,
     WA,
     WD,
+    S,
+    SA,
+    SD,
 }
 
 impl Move {
-    pub fn iterator() -> std::slice::Iter<'static, Move> {
-        // static DIRECTIONS: [Move; 3] = [Move::NONE, Move::A, Move::D];
-        static DIRECTIONS: [Move; 6] = [Move::NONE, Move::A, Move::D, Move::W, Move::WA, Move::WD];
-        DIRECTIONS.iter()
+    pub fn iterator(settings: &Settings) -> std::slice::Iter<'static, Move> {
+        // static DIRECTIONS: [Move; 2] = [Move::S, Move::SA];
+        // DIRECTIONS.iter()
+
+        static DIRECTIONS_SCROLLER: [Move; 9] = [
+            Move::NONE,
+            Move::A,
+            Move::D,
+            Move::W,
+            Move::WA,
+            Move::WD,
+            Move::S,
+            Move::SA,
+            Move::SD,
+        ];
+        static DIRECTIONS_PLATFORMER: [Move; 6] =
+            [Move::NONE, Move::A, Move::D, Move::W, Move::WA, Move::WD];
+        match settings.mode {
+            GameMode::Scroller => DIRECTIONS_SCROLLER.iter(),
+            GameMode::Platformer => DIRECTIONS_PLATFORMER.iter(),
+        }
+    }
+
+    pub fn is_only_vertical(&self) -> bool {
+        return *self == Move::S || *self == Move::W;
+    }
+}
+
+#[pyclass]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Hash)]
+enum Direction {
+    N,
+    S,
+    E,
+    W,
+}
+
+#[pyclass]
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+enum GameMode {
+    Scroller,
+    Platformer,
+}
+
+#[pyclass]
+#[derive(Debug, Copy, Clone)]
+struct Settings {
+    mode: GameMode,
+    timeout: u64,
+    always_shift: bool,
+}
+
+#[pymethods]
+impl Settings {
+    #[new]
+    fn new(mode: GameMode, timeout: u64, always_shift: bool) -> Self {
+        Settings {
+            mode,
+            timeout,
+            always_shift,
+        }
     }
 }
 
@@ -328,20 +399,48 @@ struct PlayerState {
     y: f64,
     vx: f64,
     vy: f64,
+    vpush: f64,
+    can_control_movement: bool,
+    direction: Direction,
     in_the_air: bool,
+    dead: bool,
 }
 
 #[pymethods]
 impl PlayerState {
     #[new]
-    fn new(x: f64, y: f64, vx: f64, vy: f64, in_the_air: bool) -> Self {
+    fn new(
+        x: f64,
+        y: f64,
+        vx: f64,
+        vy: f64,
+        vpush: f64,
+        can_control_movement: bool,
+        direction: Direction,
+        in_the_air: bool,
+    ) -> Self {
         PlayerState {
             x,
             y,
             vx,
             vy,
+            vpush,
+            can_control_movement,
+            direction,
             in_the_air,
+            dead: false,
         }
+    }
+}
+
+fn precision_f64(x: f64, decimals: u32) -> f64 {
+    if x == 0. || decimals == 0 {
+        0.
+    } else {
+        let shift = decimals as i32 - x.abs().log10().ceil() as i32;
+        let shift_factor = 10_f64.powi(shift);
+
+        (x * shift_factor).round() / shift_factor
     }
 }
 
@@ -354,27 +453,117 @@ impl PlayerState {
     }
 
     fn update_position(&mut self) {
-        self.x += TICK_S * self.vx;
-        self.y += TICK_S * self.vy;
+        self.x += precision_f64(TICK_S * self.vx, 5);
+        self.y += precision_f64(TICK_S * self.vy, 5);
     }
 
-    fn update_movement(&mut self, mov: Move) {
+    fn update_movement(&mut self, mov: Move, settings: &Settings, shift_pressed: bool) {
         self.vx = 0.0;
+        if settings.mode == GameMode::Scroller {
+            self.vy = 0.0;
+        }
 
-        if mov == Move::NONE {
-            return;
+        if self.can_control_movement {
+            if mov == Move::D || mov == Move::WD || mov == Move::SD {
+                self.change_direction(settings, Direction::E, shift_pressed);
+            }
+            if mov == Move::A || mov == Move::WA || mov == Move::SA {
+                self.change_direction(settings, Direction::W, shift_pressed);
+            }
+            if mov == Move::W || mov == Move::WA || mov == Move::WD {
+                self.change_direction(settings, Direction::N, shift_pressed);
+            }
+            if mov == Move::S || mov == Move::SA || mov == Move::SD {
+                self.change_direction(settings, Direction::S, shift_pressed);
+            }
+
+            self.vpush = f64::max(0.0, self.vpush - PUSH_DELTA);
         }
-        if mov == Move::A || mov == Move::WA {
-            self.vx = -PLAYER_MOVEMENT_SPEED * 1.5;
+
+        if self.vpush > 0.0 {
+            match self.direction {
+                Direction::N => {
+                    self.vy += self.vpush;
+                }
+                Direction::S => {
+                    self.vy -= self.vpush;
+                }
+                Direction::E => {
+                    self.vx += self.vpush;
+                }
+                Direction::W => {
+                    self.vx -= self.vpush;
+                }
+            }
         }
-        if mov == Move::D || mov == Move::WD {
-            self.vx = PLAYER_MOVEMENT_SPEED * 1.5;
-        }
-        if mov == Move::W || mov == Move::WA || mov == Move::WD {
-            if !self.in_the_air {
-                self.vy = PLAYER_JUMP_SPEED;
+    }
+
+    fn change_direction(&mut self, settings: &Settings, direction: Direction, sprinting: bool) {
+        self.direction = direction;
+
+        match direction {
+            Direction::E | Direction::W => {
+                let move_modifier = if sprinting { 1.5 } else { 1.0 };
+                self.vx = if direction == Direction::E {
+                    PLAYER_MOVEMENT_SPEED * move_modifier
+                } else {
+                    -PLAYER_MOVEMENT_SPEED * move_modifier
+                }
+            }
+            Direction::N => {
+                if settings.mode == GameMode::Platformer && self.in_the_air {
+                    return;
+                }
+                self.vy = if settings.mode == GameMode::Scroller {
+                    PLAYER_MOVEMENT_SPEED
+                } else {
+                    PLAYER_JUMP_SPEED
+                };
                 self.in_the_air = true;
             }
+            Direction::S => {
+                if self.in_the_air && settings.mode == GameMode::Scroller {
+                    self.vy = -PLAYER_MOVEMENT_SPEED;
+                }
+            }
+        }
+    }
+}
+
+#[pyclass]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+enum ObjectType {
+    Wall,
+    Spike,
+    SpeedTile,
+}
+
+impl ObjectType {
+    pub fn is_deadly(&self) -> bool {
+        *self == Self::Spike
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SpeedTile {
+    hitbox: Hitbox,
+}
+
+impl SpeedTile {
+    fn new(hitbox: Hitbox) -> Self {
+        Self { hitbox }
+    }
+
+    fn tick(&self, state: &mut PhysState) {
+        let already_pushing = state.player.can_control_movement && state.player.vpush > 0.0;
+        if self.hitbox.collides(&state.get_player_hitbox()).is_some() {
+            state.player.can_control_movement = false;
+            state.player.direction = Direction::N;
+            if !already_pushing {
+                state.player.vpush += PUSH_SPEED;
+            }
+        } else {
+            state.player.can_control_movement = true;
         }
     }
 }
@@ -382,14 +571,36 @@ impl PlayerState {
 #[pyclass]
 #[derive(Clone)]
 struct StaticState {
-    objects: Vec<Hitbox>,
+    objects: Vec<(Hitbox, ObjectType)>,
+    speed_tiles: Vec<SpeedTile>,
+    deadly: Vec<Hitbox>,
 }
 
 #[pymethods]
 impl StaticState {
     #[new]
-    fn new(objects: Vec<Hitbox>) -> Self {
-        StaticState { objects }
+    fn new(objects: Vec<(Hitbox, ObjectType)>) -> Self {
+        let mut speed_tiles = Vec::new();
+        let mut deadly = Vec::new();
+        let mut other_objects = Vec::new();
+        for (hitbox, t) in objects {
+            match t {
+                ObjectType::SpeedTile => {
+                    speed_tiles.push(SpeedTile::new(hitbox));
+                }
+                ObjectType::Spike => {
+                    deadly.push(hitbox);
+                }
+                _ => {
+                    other_objects.push((hitbox, t));
+                }
+            }
+        }
+        StaticState {
+            objects: other_objects,
+            speed_tiles,
+            deadly,
+        }
     }
 }
 
@@ -397,21 +608,37 @@ impl StaticState {
 #[derive(Clone, Debug)]
 struct PhysState {
     player: PlayerState,
+    settings: Settings,
 }
 
 #[pymethods]
 impl PhysState {
     #[new]
-    fn new(player: PlayerState) -> Self {
-        PhysState { player }
+    fn new(player: PlayerState, settings: Settings) -> Self {
+        PhysState { player, settings }
     }
 }
 
 impl PhysState {
-    fn tick(&mut self, state: &StaticState) {
+    fn tick(&mut self, mov: Move, shift_pressed: bool, state: &StaticState) {
+        for speed_tile in &state.speed_tiles {
+            speed_tile.tick(self);
+        }
+        self.player
+            .update_movement(mov, &self.settings, shift_pressed);
         self.player.update_position();
+
+        let player_hitbox = self.get_player_hitbox();
+        for obj in &state.deadly {
+            if player_hitbox.collides_as_rect(obj) {
+                self.player.dead = true;
+                return;
+            }
+        }
         self.detect_collision(state);
-        self.tick_platformer();
+        if self.settings.mode == GameMode::Platformer {
+            self.tick_platformer();
+        }
     }
 
     fn detect_collision(&mut self, state: &StaticState) {
@@ -422,13 +649,13 @@ impl PhysState {
             return;
         }
 
-        for (o, mpv) in list_x {
+        for (o, t, mpv) in list_x {
             self.align_x_edge(&o, mpv.x);
         }
 
         let (_, list_y2) = self.get_collisions_list(state);
 
-        for (o, mpv) in list_y2 {
+        for (o, t, mpv) in list_y2 {
             self.align_y_edge(&o, mpv.y);
         }
     }
@@ -464,13 +691,18 @@ impl PhysState {
     fn get_collisions_list(
         &self,
         state: &StaticState,
-    ) -> (Vec<(Hitbox, Pointf)>, Vec<(Hitbox, Pointf)>) {
+    ) -> (
+        Vec<(Hitbox, ObjectType, Pointf)>,
+        Vec<(Hitbox, ObjectType, Pointf)>,
+    ) {
         let mut collisions_x = Vec::new();
         let mut collisions_y = Vec::new();
         let px = self.player.x;
         let py = self.player.y;
 
-        for o1 in &state.objects {
+        let player_hitbox = &self.get_player_hitbox();
+
+        for (o1, t) in &state.objects {
             if o1.polygon.leftmost_point > px + 16.0 || o1.polygon.rightmost_point < px - 16.0 {
                 continue;
             }
@@ -479,12 +711,12 @@ impl PhysState {
                 continue;
             }
 
-            if let Some(coll) = o1.collides(&self.get_player_hitbox()) {
+            if let Some(coll) = o1.collides(player_hitbox) {
                 let mpv = coll;
                 if mpv.x == 0.0 {
-                    collisions_y.push((o1.clone(), mpv));
+                    collisions_y.push((o1.clone(), *t, mpv));
                 } else if mpv.y == 0.0 {
-                    collisions_x.push((o1.clone(), mpv));
+                    collisions_x.push((o1.clone(), *t, mpv));
                 }
             }
         }
@@ -512,10 +744,29 @@ impl PhysState {
 
 impl PartialEq for PhysState {
     fn eq(&self, other: &Self) -> bool {
-        self.player.x == other.player.x
-            && self.player.y == other.player.y
-            // && self.player.vx == other.player.vx
-            && self.player.vy == other.player.vy
+        if self.player.x != other.player.x {
+            return false;
+        }
+        if self.player.y != other.player.y {
+            return false;
+        }
+
+        if self.player.vpush != other.player.vpush {
+            return false;
+        }
+        if self.player.can_control_movement != other.player.can_control_movement {
+            return false;
+        }
+        if self.player.direction != other.player.direction {
+            return false;
+        }
+
+        if self.settings.mode == GameMode::Platformer {
+            if self.player.vy != other.player.vy {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -525,8 +776,14 @@ impl Hash for PhysState {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.player.x.to_le_bytes());
         state.write(&self.player.y.to_le_bytes());
-        // state.write(&self.player.vx.to_le_bytes());
-        state.write(&self.player.vy.to_le_bytes());
+
+        state.write(&self.player.vpush.to_le_bytes());
+        state.write(&(self.player.can_control_movement as u8).to_le_bytes());
+        state.write(&(self.player.direction as u8).to_le_bytes());
+
+        if self.settings.mode == GameMode::Platformer {
+            state.write(&self.player.vy.to_le_bytes());
+        }
     }
 }
 
@@ -577,13 +834,15 @@ fn heuristic(target_state: &PlayerState, current_state: &PlayerState) -> f64 {
 
 #[pyfunction]
 fn astar_search(
+    settings: Settings,
     initial_state: PhysState,
     target_state: PhysState,
     static_state: StaticState,
-    timeout: u64,
-) -> Option<Vec<Move>> {
+) -> Option<Vec<(Move, bool)>> {
+    println!("running astar search with settings {settings:?}");
+
     let mut open_set = BinaryHeap::new();
-    let mut came_from: HashMap<PhysState, (PhysState, Move)> = HashMap::new();
+    let mut came_from: HashMap<PhysState, (PhysState, Move, bool)> = HashMap::new();
     let mut g_score: HashMap<PhysState, i32> = HashMap::new();
     open_set.push(SearchNode::new(
         heuristic(&target_state.player, &initial_state.player),
@@ -591,6 +850,12 @@ fn astar_search(
         initial_state.clone(),
     ));
     g_score.insert(initial_state.clone(), 0);
+
+    let shift_variants = if settings.always_shift {
+        vec![true]
+    } else {
+        vec![false, true]
+    };
 
     let start = SystemTime::now();
     let mut iter = 0;
@@ -607,41 +872,65 @@ fn astar_search(
         iter += 1;
         if iter % 10000 == 0 {
             println!("iter: {iter}");
-            if start.elapsed().unwrap().as_secs() > timeout {
+            if start.elapsed().unwrap().as_secs() > settings.timeout {
                 break;
             }
+            // if iter > 1000 {
+            //     break;
+            // }
         }
 
-        for &next_move in Move::iterator() {
-            let mut neighbor_state = state.clone();
-            neighbor_state.player.update_movement(next_move);
-            neighbor_state.tick(&static_state);
+        // let mut next_move = Move::S;
+        // let shift_pressed = true;
+        // if state.player.vpush == 3250.0 {
+        //     next_move = Move::SA;
+        // }
 
-            if neighbor_state.close_enough(&target_state) {
-                let mut moves = reconstruct_path(&came_from, state);
-                moves.push(next_move);
-                println!(
-                    "found path: iter={:?}; ticks={:?}; elapsed={:?}",
-                    iter,
-                    ticks + 1,
-                    start.elapsed().unwrap().as_secs_f32()
+        for &next_move in Move::iterator(&settings) {
+            for &shift_pressed in shift_variants.iter() {
+                if !settings.always_shift && shift_pressed && next_move.is_only_vertical() {
+                    continue;
+                }
+
+                let mut neighbor_state = state.clone();
+                neighbor_state.tick(next_move, shift_pressed, &static_state);
+                // println!("[{:?}] before_player: {:?}; after_player: {:?}", next_move, state.player, neighbor_state.player);
+
+                if neighbor_state.player.dead {
+                    continue;
+                }
+
+                if neighbor_state.close_enough(&target_state) {
+                    let mut moves = reconstruct_path(&came_from, state);
+                    moves.push((next_move, shift_pressed));
+                    println!(
+                        "found path: iter={:?}; ticks={:?}; elapsed={:?}",
+                        iter,
+                        ticks + 1,
+                        start.elapsed().unwrap().as_secs_f32()
+                    );
+                    return Some(moves);
+                }
+
+                // if neighbor_state.player.vpush > 2000.0 {
+                // println!("[{next_move:?}] good state: {neighbor_state:?}");
+                // }
+
+                if g_score
+                    .get(&neighbor_state)
+                    .is_some_and(|old_ticks| ticks + 1 >= *old_ticks)
+                {
+                    continue;
+                }
+                let f_score =
+                    f64::from(ticks + 1) + heuristic(&target_state.player, &neighbor_state.player);
+                came_from.insert(
+                    neighbor_state.clone(),
+                    (state.clone(), next_move, shift_pressed),
                 );
-                return Some(moves);
+                g_score.insert(neighbor_state.clone(), ticks + 1);
+                open_set.push(SearchNode::new(f_score, ticks + 1, neighbor_state));
             }
-
-            // println!("[{:?}] before_player: {:?}; after_player: {:?}", next_move, state.player, neighbor_state.player);
-
-            if g_score
-                .get(&neighbor_state)
-                .is_some_and(|old_ticks| ticks + 1 >= *old_ticks)
-            {
-                continue;
-            }
-            let f_score =
-                f64::from(ticks + 1) + heuristic(&target_state.player, &neighbor_state.player);
-            came_from.insert(neighbor_state.clone(), (state.clone(), next_move));
-            g_score.insert(neighbor_state.clone(), ticks + 1);
-            open_set.push(SearchNode::new(f_score, ticks + 1, neighbor_state));
         }
     }
 
@@ -649,14 +938,14 @@ fn astar_search(
 }
 
 fn reconstruct_path(
-    came_from: &HashMap<PhysState, (PhysState, Move)>,
+    came_from: &HashMap<PhysState, (PhysState, Move, bool)>,
     current_node: PhysState,
-) -> Vec<Move> {
+) -> Vec<(Move, bool)> {
     let mut path = Vec::new();
     let mut current = current_node;
 
-    while let Some((prev, move_direction)) = came_from.get(&current) {
-        path.push(*move_direction);
+    while let Some((prev, move_direction, shift_pressed)) = came_from.get(&current) {
+        path.push((*move_direction, *shift_pressed));
         current = prev.clone();
     }
 
@@ -672,6 +961,10 @@ fn cheats_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<StaticState>()?;
     m.add_class::<PhysState>()?;
     m.add_class::<Move>()?;
+    m.add_class::<Settings>()?;
+    m.add_class::<GameMode>()?;
+    m.add_class::<ObjectType>()?;
+    m.add_class::<Direction>()?;
     m.add_function(wrap_pyfunction!(astar_search, m)?)?;
     Ok(())
 }
