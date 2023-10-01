@@ -62,6 +62,8 @@ class Hackceler8(arcade.Window):
         self.force_next_keys = []
         self.force_next_keys_per_frame = 1
 
+        self.slow_ticks_mode = False
+
     def show_menu(self):
         self.main_menu_manager.enable()
         self.main_menu_manager.clear()
@@ -250,7 +252,7 @@ class Hackceler8(arcade.Window):
                     rect.y2(),
                     rect.y1(),
                     color,
-                    border_width=5,
+                    border_width=1,
                 )
 
         self.gui_camera.use()
@@ -326,6 +328,9 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
+        if self.slow_ticks_mode:
+            return
+
         if self.force_next_keys:
             for keys in self.force_next_keys[: self.force_next_keys_per_frame]:
                 self.game.raw_pressed_keys = {arcade.key.LSHIFT}
@@ -352,9 +357,36 @@ class Hackceler8(arcade.Window):
 
         self.center_camera_to_player()
 
-    def on_key_press(self, symbol: int, _modifiers: int):
+    def on_key_press(self, symbol: int, modifiers: int):
         if self.game is None:
             return
+
+        if symbol == arcade.key.J and modifiers & arcade.key.MOD_CTRL:
+            self.slow_ticks_mode = True
+            logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
+            return
+
+        if symbol == arcade.key.K and modifiers & arcade.key.MOD_CTRL:
+            self.slow_ticks_mode = False
+            logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
+            return
+
+        if (
+            self.slow_ticks_mode
+            and symbol == arcade.key.T
+            and modifiers & arcade.key.MOD_CTRL
+            and self.game is not None
+        ):
+            self.game.tick()
+            self.center_camera_to_player()
+            print(
+                f"player state: {self.game.player.x=} {self.game.player.y=} "
+                f"{self.game.player.x_speed=} {self.game.player.y_speed=} {self.game.player.push_speed=} "
+                f"{self.game.player.in_the_air=} {self.game.player.dead=} "
+                f"{self.game.player.health=} "
+            )
+            return
+
         if symbol == arcade.key.M:
             logging.info("Showing menu")
             self.show_menu()
@@ -449,8 +481,3 @@ class Hackceler8(arcade.Window):
                         case _:
                             print("unknown move", move)
                 print("path found", path, self.force_next_keys)
-
-                if modifiers & arcade.key.MOD_SHIFT:
-                    self.force_next_keys_per_frame = 1
-                else:
-                    self.force_next_keys_per_frame = len(self.force_next_keys)
