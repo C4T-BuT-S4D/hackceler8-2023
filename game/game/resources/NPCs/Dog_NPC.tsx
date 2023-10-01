@@ -1,17 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<
-tileset
-version = "1.10"
-tiledversion = "1.10.1"
-name = "npc1"
-tilewidth = "34"
-tileheight = "50"
-tilecount = "8"
-columns = "4" >
-    < image
-source = "Dog_NPC.png"
-width = "136"
-height = "100" / >
+<tileset version="1.10" tiledversion="1.10.1" name="npc1" tilewidth="34" tileheight="50" tilecount="8" columns="4">
+ <image source="Dog_NPC.png" width="136" height="100"/>
  <tile id="0">
   <properties>
    <property name="animation" value="idle-front"/>

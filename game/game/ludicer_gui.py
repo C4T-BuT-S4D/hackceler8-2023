@@ -17,6 +17,7 @@ import logging
 import arcade
 from arcade import gui
 from pyglet.image import load as pyglet_load
+import cheats_rust
 
 import constants
 import ludicer
@@ -233,6 +234,8 @@ class Hackceler8(arcade.Window):
                     color = arcade.color.RED_DEVIL
                 case "SpeedTile":
                     color = arcade.color.BLUE_GREEN
+                case "Switch":
+                    color = arcade.color.CADMIUM_GREEN
                 case _:
                     print(f"skipped object {o.nametype}")
 
@@ -319,7 +322,31 @@ class Hackceler8(arcade.Window):
     def on_update(self, _delta_time: float):
         if self.game is None:
             return
-        self.game.tick()
+
+        if self.force_next_keys:
+            for keys in self.force_next_keys[: self.force_next_keys_per_frame]:
+                self.game.raw_pressed_keys = {arcade.key.LSHIFT}
+                for c in keys:
+                    match c:
+                        case "A":
+                            self.game.raw_pressed_keys.add(arcade.key.A)
+                        case "D":
+                            self.game.raw_pressed_keys.add(arcade.key.D)
+                        case "W":
+                            self.game.raw_pressed_keys.add(arcade.key.W)
+                        case "S":
+                            self.game.raw_pressed_keys.add(arcade.key.S)
+                        case _:
+                            logging.fatal("unknown key %s", c)
+                self.game.tick()
+
+            self.force_next_keys = self.force_next_keys[
+                self.force_next_keys_per_frame :
+            ]
+            self.game.raw_pressed_keys = set()
+        else:
+            self.game.tick()
+
         self.center_camera_to_player()
 
     def on_key_press(self, symbol: int, _modifiers: int):
@@ -329,6 +356,10 @@ class Hackceler8(arcade.Window):
             logging.info("Showing menu")
             self.show_menu()
             return
+
+        if self.force_next_keys:
+            self.force_next_keys = []
+
         self.game.raw_pressed_keys.add(symbol)
 
     def on_key_release(self, symbol: int, _modifiers: int):
@@ -336,3 +367,82 @@ class Hackceler8(arcade.Window):
             return
         if symbol in self.game.raw_pressed_keys:
             self.game.raw_pressed_keys.remove(symbol)
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        if self.game is None:
+            return
+
+        if button == arcade.MOUSE_BUTTON_LEFT:
+            player = self.game.player
+
+            target_x = x + self.camera.position.x
+            target_y = y + self.camera.position.y
+
+            logging.info(
+                "mouse pressed at (%s, %s), player pos: (%s, %s), target: (%s, %s)",
+                x,
+                y,
+                player.x,
+                player.y,
+                target_x,
+                target_y,
+            )
+
+            initial_state = cheats_rust.PhysState(
+                player=cheats_rust.PlayerState(
+                    x=player.x,
+                    y=player.y,
+                    vx=player.x_speed,
+                    vy=player.y_speed,
+                    in_the_air=player.in_the_air,
+                )
+            )
+            static_state = cheats_rust.StaticState(
+                objects=[
+                    cheats_rust.Hitbox(
+                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline]
+                    )
+                    for o in self.game.tiled_map.static_objs
+                ]
+            )
+            target_state = cheats_rust.PhysState(
+                player=cheats_rust.PlayerState(
+                    x=target_x,
+                    y=target_y,
+                    vx=0,
+                    vy=0,
+                    in_the_air=False,
+                )
+            )
+
+            timeout = 5
+            if modifiers & arcade.key.MOD_ALT or modifiers & arcade.key.MOD_OPTION:
+                timeout = 30
+
+            path = cheats_rust.astar_search(
+                initial_state=initial_state,
+                target_state=target_state,
+                static_state=static_state,
+                timeout=timeout,
+            )
+            if not path:
+                print("Path not found")
+            else:
+                self.force_next_keys = []
+                for move in path:
+                    match move:
+                        case cheats_rust.Move.W:
+                            self.force_next_keys.append({"W"})
+                        case cheats_rust.Move.A:
+                            self.force_next_keys.append({"A"})
+                        case cheats_rust.Move.D:
+                            self.force_next_keys.append({"D"})
+                        case cheats_rust.Move.WA:
+                            self.force_next_keys.append({"W", "A"})
+                        case cheats_rust.Move.WD:
+                            self.force_next_keys.append({"W", "D"})
+                        case cheats_rust.Move.NONE:
+                            self.force_next_keys.append(set())
+                        case _:
+                            print("unknown move", move)
+                print("path found", path, self.force_next_keys)

@@ -1,17 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<
-tileset
-version = "1.10"
-tiledversion = "1.10.2"
-name = "npc1"
-tilewidth = "88"
-tileheight = "74"
-tilecount = "8"
-columns = "4" >
-    < image
-source = "Duck_NPC.png"
-width = "352"
-height = "148" / >
+<tileset version="1.10" tiledversion="1.10.2" name="npc1" tilewidth="88" tileheight="74" tilecount="8" columns="4">
+ <image source="Duck_NPC.png" width="352" height="148"/>
  <tile id="0">
   <properties>
    <property name="animation" value="idle-front"/>
@@ -23,34 +12,34 @@ height = "148" / >
  </tile>
  <tile id="1">
   <properties>
-      <property name="animation" value="idle-left"/>
+   <property name="animation" value="idle-left"/>
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
-      <frame tileid="1" duration="250"/>
+   <frame tileid="1" duration="250"/>
   </animation>
  </tile>
  <tile id="2">
   <properties>
-      <property name="animation" value="idle-right"/>
+   <property name="animation" value="idle-right"/>
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
-      <frame tileid="2" duration="250"/>
+   <frame tileid="2" duration="250"/>
   </animation>
  </tile>
  <tile id="3">
   <properties>
-      <property name="animation" value="idle-back"/>
+   <property name="animation" value="idle-back"/>
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
-      <frame tileid="3" duration="250"/>
+   <frame tileid="3" duration="250"/>
   </animation>
  </tile>
  <tile id="4">
   <properties>
-      <property name="animation" value="walk-front"/>
+   <property name="animation" value="walk-front"/>
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
@@ -63,7 +52,7 @@ height = "148" / >
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
-      <frame tileid="1" duration="250"/>
+   <frame tileid="1" duration="250"/>
   </animation>
  </tile>
  <tile id="6">
@@ -72,16 +61,16 @@ height = "148" / >
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
-      <frame tileid="2" duration="250"/>
+   <frame tileid="2" duration="250"/>
   </animation>
  </tile>
  <tile id="7">
   <properties>
-      <property name="animation" value="walk-back"/>
+   <property name="animation" value="walk-back"/>
    <property name="loop" type="bool" value="true"/>
   </properties>
   <animation>
-      <frame tileid="3" duration="250"/>
+   <frame tileid="3" duration="250"/>
   </animation>
  </tile>
 </tileset>
