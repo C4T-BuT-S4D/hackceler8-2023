@@ -649,13 +649,13 @@ impl PhysState {
             return;
         }
 
-        for (o, t, mpv) in list_x {
+        for (o, _, mpv) in list_x {
             self.align_x_edge(&o, mpv.x);
         }
 
         let (_, list_y2) = self.get_collisions_list(state);
 
-        for (o, t, mpv) in list_y2 {
+        for (o, _, mpv) in list_y2 {
             self.align_y_edge(&o, mpv.y);
         }
     }
