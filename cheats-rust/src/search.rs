@@ -67,7 +67,7 @@ pub fn astar_search(
     mut initial_state: PhysState,
     target_state: PhysState,
     static_state: StaticState,
-) -> Option<Vec<(Move, bool)>> {
+) -> Option<Vec<(Move, bool, PlayerState)>> {
     println!("running astar search with settings {settings:?}");
 
     initial_state.detect_env_mod(&static_state);
@@ -133,7 +133,7 @@ pub fn astar_search(
 
                 if neighbor_state.close_enough(&target_state, TARGET_PRECISION) {
                     let mut moves = reconstruct_path(&came_from, state);
-                    moves.push((next_move, shift_pressed));
+                    moves.push((next_move, shift_pressed, neighbor_state.player));
                     println!(
                         "found path: iter={:?}; ticks={:?}; elapsed={:?}",
                         iter,
@@ -171,12 +171,12 @@ pub fn astar_search(
 fn reconstruct_path(
     came_from: &HashMap<PhysState, (PhysState, Move, bool)>,
     current_node: PhysState,
-) -> Vec<(Move, bool)> {
+) -> Vec<(Move, bool, PlayerState)> {
     let mut path = Vec::new();
     let mut current = current_node;
 
     while let Some((prev, move_direction, shift_pressed)) = came_from.get(&current) {
-        path.push((*move_direction, *shift_pressed));
+        path.push((*move_direction, *shift_pressed, current.player));
         current = prev.clone();
     }
 

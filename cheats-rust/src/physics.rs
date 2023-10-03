@@ -23,14 +23,23 @@ pub const PUSH_SPEED: f64 = 2500.0;
 #[pyclass]
 #[derive(Clone, Debug)]
 pub struct PlayerState {
+    #[pyo3(get, set)]
     pub x: f64,
+    #[pyo3(get, set)]
     pub y: f64,
+    #[pyo3(get, set)]
     pub vx: f64,
+    #[pyo3(get, set)]
     pub vy: f64,
+    #[pyo3(get, set)]
     pub vpush: f64,
+    #[pyo3(get, set)]
     pub can_control_movement: bool,
+    #[pyo3(get, set)]
     pub direction: Direction,
+    #[pyo3(get, set)]
     pub in_the_air: bool,
+    #[pyo3(get, set)]
     pub dead: bool,
 }
 
@@ -62,6 +71,20 @@ impl PlayerState {
     }
 }
 
+pub static mut ROUNDED_SPEEDS: [f64; 10000] = [0.0; 10000];
+
+fn round_speed(x: f64) -> f64 {
+    assert!(x.round() == x);
+    let i = x.round() as i32;
+    unsafe {
+        if i >= 0 {
+            ROUNDED_SPEEDS[i as usize]
+        } else {
+            -ROUNDED_SPEEDS[(-i) as usize]
+        }
+    }
+}
+
 impl PlayerState {
     pub fn center(&self) -> Pointf {
         Pointf {
@@ -71,8 +94,10 @@ impl PlayerState {
     }
 
     fn update_position(&mut self) {
-        self.x += precision_f64(TICK_S * self.vx, 5);
-        self.y += precision_f64(TICK_S * self.vy, 5);
+        //self.x += precision_f64(TICK_S * self.vx, 5);
+        //self.y += precision_f64(TICK_S * self.vy, 5);
+        self.x += round_speed(self.vx);
+        self.y += round_speed(self.vy);
     }
 
     fn update_movement(

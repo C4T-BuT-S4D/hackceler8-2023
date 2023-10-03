@@ -21,6 +21,13 @@ mod search;
 mod settings;
 mod static_state;
 
+#[pyfunction]
+fn set_rounded_speeds(vals: Vec<f64>) {
+    unsafe {
+        physics::ROUNDED_SPEEDS = vals.try_into().unwrap();
+    }
+}
+
 #[pymodule]
 fn cheats_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Pointf>()?;
@@ -35,5 +42,6 @@ fn cheats_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Direction>()?;
     m.add_class::<EnvModifier>()?;
     m.add_function(wrap_pyfunction!(astar_search, m)?)?;
+    m.add_function(wrap_pyfunction!(set_rounded_speeds, m)?)?;
     Ok(())
 }

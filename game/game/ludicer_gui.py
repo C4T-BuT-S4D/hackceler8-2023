@@ -334,9 +334,16 @@ class Hackceler8(arcade.Window):
             return
 
         if self.force_next_keys:
-            for keys in self.force_next_keys[: self.force_next_keys_per_frame]:
+            for keys, state in self.force_next_keys[: self.force_next_keys_per_frame]:
                 self.game.raw_pressed_keys = keys
                 self.game.tick()
+                attrs = [('x','x'), ('y','y'), ('x_speed','vx'), ('y_speed','vy')]
+                vals = [(getattr(self.game.player, k1), getattr(state, k2)) for k1,k2 in attrs]
+                if not all(x == y for x,y in vals):
+                    print('incorrect transition:')
+                    for (k1,k2),(v1,v2) in zip(attrs,vals):
+                        print(k1, 'predicted', v2, 'got', v1)
+                print()
 
             self.force_next_keys = self.force_next_keys[
                 self.force_next_keys_per_frame :
@@ -519,6 +526,8 @@ class Hackceler8(arcade.Window):
                 settings=settings,
             )
 
+            cheats_rust.set_rounded_speeds([round(constants.TICK_S * i, 5) for i in range(10000)])
+
             path = cheats_rust.astar_search(
                 settings=settings,
                 initial_state=initial_state,
@@ -529,7 +538,7 @@ class Hackceler8(arcade.Window):
                 print("Path not found")
             else:
                 self.force_next_keys = []
-                for move, shift in path:
+                for move, shift, state in path:
                     match move:
                         case cheats_rust.Move.W:
                             moves = {arcade.key.W}
@@ -556,6 +565,6 @@ class Hackceler8(arcade.Window):
                     if shift:
                         moves.add(arcade.key.LSHIFT)
 
-                    self.force_next_keys.append(moves)
+                    self.force_next_keys.append((moves, state))
 
                 print("path found", path)
