@@ -243,6 +243,8 @@ class Hackceler8(arcade.Window):
                     color = arcade.color.BLUE_GREEN
                 case "Switch":
                     color = arcade.color.CADMIUM_GREEN
+                case "Boss":
+                    color = arcade.color.CYAN
                 case _:
                     print(f"skipped object {o.nametype}")
 
@@ -421,10 +423,20 @@ class Hackceler8(arcade.Window):
                     mode = cheats_rust.GameMode.Platformer
 
             cheat_settings = get_settings()
-            settings = cheats_rust.Settings(
+            print("cheat settings:", cheat_settings)
+
+            allowed_moves = []
+            if cheat_settings["allowed_moves"].lower() not in {"", "all"}:
+                moves = cheat_settings["allowed_moves"].upper().split(",")
+                for move in moves:
+                    allowed_moves.append(getattr(cheats_rust.Move, move))
+
+            settings = cheats_rust.SearchSettings(
                 mode=mode,
-                timeout=cheat_settings.timeout,
-                always_shift=cheat_settings.always_shift,
+                timeout=cheat_settings["timeout"],
+                always_shift=cheat_settings["always_shift"],
+                disable_shift=cheat_settings["disable_shift"],
+                allowed_moves=allowed_moves,
                 enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
             )
 
@@ -499,7 +511,7 @@ class Hackceler8(arcade.Window):
                     can_control_movement=player.can_control_movement,
                     in_the_air=player.in_the_air,
                 ),
-                settings=settings,
+                settings=settings.physics_settings(),
             )
             static_state = cheats_rust.StaticState(
                 objects=static_objects,
@@ -516,7 +528,7 @@ class Hackceler8(arcade.Window):
                     can_control_movement=False,
                     in_the_air=False,
                 ),
-                settings=settings,
+                settings=settings.physics_settings(),
             )
 
             path = cheats_rust.astar_search(

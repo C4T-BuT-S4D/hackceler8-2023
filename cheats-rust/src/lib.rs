@@ -6,7 +6,7 @@ use hitbox::Hitbox;
 use moves::{Direction, Move};
 use objects::ObjectType;
 use physics::{PhysState, PlayerState};
-use settings::{GameMode, Settings};
+use settings::{GameMode, PhysicsSettings, SearchSettings};
 
 use crate::search::astar_search;
 use crate::static_state::StaticState;
@@ -29,7 +29,8 @@ fn cheats_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<StaticState>()?;
     m.add_class::<PhysState>()?;
     m.add_class::<Move>()?;
-    m.add_class::<Settings>()?;
+    m.add_class::<SearchSettings>()?;
+    m.add_class::<PhysicsSettings>()?;
     m.add_class::<GameMode>()?;
     m.add_class::<ObjectType>()?;
     m.add_class::<Direction>()?;
