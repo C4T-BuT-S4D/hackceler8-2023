@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import logging
-import importlib
 
 import arcade
 from arcade import gui
@@ -23,6 +22,7 @@ import cheats_rust
 import constants
 import ludicer
 from map_loading.maps import GameMode
+from cheats.settings import get_settings
 
 SCREEN_TITLE = "Hackceler8-23"
 
@@ -398,8 +398,6 @@ class Hackceler8(arcade.Window):
             return
 
         if button == arcade.MOUSE_BUTTON_LEFT and modifiers & arcade.key.MOD_CTRL:
-            importlib.reload(cheats_rust)
-
             player = self.game.player
 
             target_x = x + self.camera.position.x
@@ -422,12 +420,12 @@ class Hackceler8(arcade.Window):
                 case GameMode.MODE_PLATFORMER:
                     mode = cheats_rust.GameMode.Platformer
 
-            timeout = 5
-            if modifiers & arcade.key.MOD_ALT or modifiers & arcade.key.MOD_OPTION:
-                timeout = 30
-
+            cheat_settings = get_settings()
             settings = cheats_rust.Settings(
-                mode=mode, timeout=timeout, always_shift=True
+                mode=mode,
+                timeout=cheat_settings.timeout,
+                always_shift=cheat_settings.always_shift,
+                enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
             )
 
             print(
@@ -464,6 +462,20 @@ class Hackceler8(arcade.Window):
                 for o in self.game.objects
                 if o.nametype == "SpeedTile"
             ]
+            enviroments = [
+                cheats_rust.EnvModifier(
+                    hitbox=cheats_rust.Hitbox(
+                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                    ),
+                    jump_speed=o.modifier.jump_speed,
+                    jump_height=o.modifier.jump_height,
+                    walk_speed=o.modifier.walk_speed,
+                    run_speed=o.modifier.run_speed,
+                    gravity=o.modifier.gravity,
+                    jump_override=o.modifier.jump_override,
+                )
+                for o in self.game.physics_engine.env_tiles
+            ]
 
             player_direction = None
             match player.direction:
@@ -491,6 +503,7 @@ class Hackceler8(arcade.Window):
             )
             static_state = cheats_rust.StaticState(
                 objects=static_objects,
+                environments=enviroments,
             )
             target_state = cheats_rust.PhysState(
                 player=cheats_rust.PlayerState(

@@ -6,8 +6,8 @@ from copy import deepcopy
 
 @dataclasses.dataclass
 class Settings:
-    param1: str = ""
-    param2: bool = False
+    timeout: int = 5
+    always_shift: bool = True
 
 
 __lock: RLock = RLock()
