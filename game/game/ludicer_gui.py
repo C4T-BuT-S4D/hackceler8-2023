@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import importlib
 
 import arcade
 from arcade import gui
@@ -21,6 +22,7 @@ import cheats_rust
 
 import constants
 import ludicer
+from map_loading.maps import GameMode
 
 SCREEN_TITLE = "Hackceler8-23"
 
@@ -333,19 +335,7 @@ class Hackceler8(arcade.Window):
 
         if self.force_next_keys:
             for keys in self.force_next_keys[: self.force_next_keys_per_frame]:
-                self.game.raw_pressed_keys = {arcade.key.LSHIFT}
-                for c in keys:
-                    match c:
-                        case "A":
-                            self.game.raw_pressed_keys.add(arcade.key.A)
-                        case "D":
-                            self.game.raw_pressed_keys.add(arcade.key.D)
-                        case "W":
-                            self.game.raw_pressed_keys.add(arcade.key.W)
-                        case "S":
-                            self.game.raw_pressed_keys.add(arcade.key.S)
-                        case _:
-                            logging.fatal("unknown key %s", c)
+                self.game.raw_pressed_keys = keys
                 self.game.tick()
 
             self.force_next_keys = self.force_next_keys[
@@ -408,6 +398,8 @@ class Hackceler8(arcade.Window):
             return
 
         if button == arcade.MOUSE_BUTTON_LEFT and modifiers & arcade.key.MOD_CTRL:
+            importlib.reload(cheats_rust)
+
             player = self.game.player
 
             target_x = x + self.camera.position.x
@@ -423,22 +415,82 @@ class Hackceler8(arcade.Window):
                 target_y,
             )
 
+            mode = None
+            match self.game.current_mode:
+                case GameMode.MODE_SCROLLER:
+                    mode = cheats_rust.GameMode.Scroller
+                case GameMode.MODE_PLATFORMER:
+                    mode = cheats_rust.GameMode.Platformer
+
+            timeout = 5
+            if modifiers & arcade.key.MOD_ALT or modifiers & arcade.key.MOD_OPTION:
+                timeout = 30
+
+            settings = cheats_rust.Settings(
+                mode=mode, timeout=timeout, always_shift=True
+            )
+
+            print(
+                "Static objects:", {o.nametype for o in self.game.tiled_map.static_objs}
+            )
+            print("Game objects:", {o.nametype for o in self.game.objects})
+
+            static_objects = [
+                (
+                    cheats_rust.Hitbox(
+                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                    ),
+                    cheats_rust.ObjectType.Wall,
+                )
+                for o in self.game.tiled_map.static_objs
+            ]
+            static_objects += [
+                (
+                    cheats_rust.Hitbox(
+                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                    ),
+                    cheats_rust.ObjectType.Spike,
+                )
+                for o in self.game.objects
+                if o.nametype == "Spike"
+            ]
+            static_objects += [
+                (
+                    cheats_rust.Hitbox(
+                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                    ),
+                    cheats_rust.ObjectType.SpeedTile,
+                )
+                for o in self.game.objects
+                if o.nametype == "SpeedTile"
+            ]
+
+            player_direction = None
+            match player.direction:
+                case player.DIR_N:
+                    player_direction = cheats_rust.Direction.N
+                case player.DIR_E:
+                    player_direction = cheats_rust.Direction.E
+                case player.DIR_S:
+                    player_direction = cheats_rust.Direction.S
+                case player.DIR_W:
+                    player_direction = cheats_rust.Direction.W
+
             initial_state = cheats_rust.PhysState(
                 player=cheats_rust.PlayerState(
                     x=player.x,
                     y=player.y,
                     vx=player.x_speed,
                     vy=player.y_speed,
+                    vpush=player.push_speed,
+                    direction=player_direction,
+                    can_control_movement=player.can_control_movement,
                     in_the_air=player.in_the_air,
-                )
+                ),
+                settings=settings,
             )
             static_state = cheats_rust.StaticState(
-                objects=[
-                    cheats_rust.Hitbox(
-                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline]
-                    )
-                    for o in self.game.tiled_map.static_objs
-                ]
+                objects=static_objects,
             )
             target_state = cheats_rust.PhysState(
                 player=cheats_rust.PlayerState(
@@ -446,38 +498,51 @@ class Hackceler8(arcade.Window):
                     y=target_y,
                     vx=0,
                     vy=0,
+                    vpush=0,
+                    direction=player_direction,
+                    can_control_movement=False,
                     in_the_air=False,
-                )
+                ),
+                settings=settings,
             )
 
-            timeout = 5
-            if modifiers & arcade.key.MOD_ALT or modifiers & arcade.key.MOD_OPTION:
-                timeout = 30
-
             path = cheats_rust.astar_search(
+                settings=settings,
                 initial_state=initial_state,
                 target_state=target_state,
                 static_state=static_state,
-                timeout=timeout,
             )
             if not path:
                 print("Path not found")
             else:
                 self.force_next_keys = []
-                for move in path:
+                for move, shift in path:
                     match move:
                         case cheats_rust.Move.W:
-                            self.force_next_keys.append({"W"})
+                            moves = {arcade.key.W}
                         case cheats_rust.Move.A:
-                            self.force_next_keys.append({"A"})
+                            moves = {arcade.key.A}
                         case cheats_rust.Move.D:
-                            self.force_next_keys.append({"D"})
+                            moves = {arcade.key.D}
                         case cheats_rust.Move.WA:
-                            self.force_next_keys.append({"W", "A"})
+                            moves = {arcade.key.W, arcade.key.A}
                         case cheats_rust.Move.WD:
-                            self.force_next_keys.append({"W", "D"})
+                            moves = {arcade.key.W, arcade.key.D}
+                        case cheats_rust.Move.S:
+                            moves = {arcade.key.S}
+                        case cheats_rust.Move.SA:
+                            moves = {arcade.key.S, arcade.key.A}
+                        case cheats_rust.Move.SD:
+                            moves = {arcade.key.S, arcade.key.D}
                         case cheats_rust.Move.NONE:
-                            self.force_next_keys.append(set())
+                            moves = set()
                         case _:
                             print("unknown move", move)
-                print("path found", path, self.force_next_keys)
+                            continue
+
+                    if shift:
+                        moves.add(arcade.key.LSHIFT)
+
+                    self.force_next_keys.append(moves)
+
+                print("path found", path)
