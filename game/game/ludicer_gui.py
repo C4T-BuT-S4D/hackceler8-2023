@@ -17,12 +17,13 @@ import logging
 import arcade
 from arcade import gui
 from pyglet.image import load as pyglet_load
-import cheats_rust
 
 import constants
 import ludicer
 from map_loading.maps import GameMode
 from cheats.settings import get_settings
+
+import cheats_rust
 
 SCREEN_TITLE = "Hackceler8-23"
 
@@ -326,6 +327,47 @@ class Hackceler8(arcade.Window):
 
         arcade.finish_render()
 
+    def tick_game(self):
+        settings, state, static_state = self.to_rust_state()
+        keys = set(self.game.raw_pressed_keys) # copy
+        if arcade.key.LSHIFT in keys:
+            shift = True
+            keys.remove(arcade.key.LSHIFT)
+        else:
+            shift = False
+        print('pressed keys', keys)
+        keys &= {arcade.key.W, arcade.key.A, arcade.key.S, arcade.key.D}
+        if keys == {arcade.key.W}:
+            move = cheats_rust.Move.W
+        elif keys == {arcade.key.A}:
+            move = cheats_rust.Move.A
+        elif keys == {arcade.key.D}:
+            move = cheats_rust.Move.D
+        elif keys == {arcade.key.W, arcade.key.A}:
+            move = cheats_rust.Move.WA
+        elif keys == {arcade.key.W, arcade.key.D}:
+            move = cheats_rust.Move.WD
+        elif keys == {arcade.key.S}:
+            move = cheats_rust.Move.S
+        elif keys == {arcade.key.S, arcade.key.A}:
+            move = cheats_rust.Move.SA
+        elif keys == {arcade.key.S, arcade.key.D}:
+            move = cheats_rust.Move.SD
+        elif keys == set():
+            move = cheats_rust.Move.NONE
+        else:
+            print('unknown moves')
+            return 
+        expected = cheats_rust.get_transition(static_state, state, move, shift)
+        self.game.tick()
+        attrs = [('x','x'), ('y','y'), ('x_speed','vx'), ('y_speed','vy')]
+        vals = [(getattr(self.game.player, k1), getattr(expected, k2)) for k1, k2 in attrs]
+        if not all(x == y for x,y in vals):
+            print('incorrect transition:')
+            for (k1,k2), (v1,v2) in zip(attrs, vals):
+                print(k1, 'predicted', v2, 'got', v1)
+            print()
+
     def on_update(self, _delta_time: float):
         if self.game is None:
             return
@@ -350,7 +392,8 @@ class Hackceler8(arcade.Window):
             ]
             self.game.raw_pressed_keys = set()
         else:
-            self.game.tick()
+            self.tick_game()
+            #self.game.tick()
 
         self.center_camera_to_player()
 
@@ -400,6 +443,102 @@ class Hackceler8(arcade.Window):
         if symbol in self.game.raw_pressed_keys:
             self.game.raw_pressed_keys.remove(symbol)
 
+    def to_rust_state(self):
+        mode = None
+        player = self.game.player
+        match self.game.current_mode:
+            case GameMode.MODE_SCROLLER:
+                mode = cheats_rust.GameMode.Scroller
+            case GameMode.MODE_PLATFORMER:
+                mode = cheats_rust.GameMode.Platformer
+
+        cheat_settings = get_settings()
+        settings = cheats_rust.Settings(
+            mode=mode,
+            timeout=cheat_settings.timeout,
+            always_shift=cheat_settings.always_shift,
+            enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
+        )
+
+        #print(
+        #    "Static objects:", {o.nametype for o in self.game.tiled_map.static_objs}
+        #)
+        #print("Game objects:", {o.nametype for o in self.game.objects})
+
+        static_objects = [
+            (
+                cheats_rust.Hitbox(
+                    outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                ),
+                cheats_rust.ObjectType.Wall,
+            )
+            for o in self.game.tiled_map.static_objs
+        ]
+        static_objects += [
+            (
+                cheats_rust.Hitbox(
+                    outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                ),
+                cheats_rust.ObjectType.Spike,
+            )
+            for o in self.game.objects
+            if o.nametype == "Spike"
+        ]
+        static_objects += [
+            (
+                cheats_rust.Hitbox(
+                    outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                ),
+                cheats_rust.ObjectType.SpeedTile,
+            )
+            for o in self.game.objects
+            if o.nametype == "SpeedTile"
+        ]
+        enviroments = [
+            cheats_rust.EnvModifier(
+                hitbox=cheats_rust.Hitbox(
+                    outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                ),
+                jump_speed=o.modifier.jump_speed,
+                jump_height=o.modifier.jump_height,
+                walk_speed=o.modifier.walk_speed,
+                run_speed=o.modifier.run_speed,
+                gravity=o.modifier.gravity,
+                jump_override=o.modifier.jump_override,
+            )
+            for o in self.game.physics_engine.env_tiles
+        ]
+
+        player_direction = None
+        match player.direction:
+            case player.DIR_N:
+                player_direction = cheats_rust.Direction.N
+            case player.DIR_E:
+                player_direction = cheats_rust.Direction.E
+            case player.DIR_S:
+                player_direction = cheats_rust.Direction.S
+            case player.DIR_W:
+                player_direction = cheats_rust.Direction.W
+
+        initial_state = cheats_rust.PhysState(
+            player=cheats_rust.PlayerState(
+                x=player.x,
+                y=player.y,
+                vx=player.x_speed,
+                vy=player.y_speed,
+                vpush=player.push_speed,
+                direction=player_direction,
+                can_control_movement=player.can_control_movement,
+                in_the_air=player.in_the_air,
+            ),
+            settings=settings,
+        )
+        static_state = cheats_rust.StaticState(
+            objects=static_objects,
+            environments=enviroments,
+        )
+        return (settings, initial_state, static_state)
+
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if self.game is None:
             return
@@ -420,98 +559,8 @@ class Hackceler8(arcade.Window):
                 target_y,
             )
 
-            mode = None
-            match self.game.current_mode:
-                case GameMode.MODE_SCROLLER:
-                    mode = cheats_rust.GameMode.Scroller
-                case GameMode.MODE_PLATFORMER:
-                    mode = cheats_rust.GameMode.Platformer
+            settings, initial_state, static_state = self.to_rust_state()
 
-            cheat_settings = get_settings()
-            settings = cheats_rust.Settings(
-                mode=mode,
-                timeout=cheat_settings.timeout,
-                always_shift=cheat_settings.always_shift,
-                enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
-            )
-
-            print(
-                "Static objects:", {o.nametype for o in self.game.tiled_map.static_objs}
-            )
-            print("Game objects:", {o.nametype for o in self.game.objects})
-
-            static_objects = [
-                (
-                    cheats_rust.Hitbox(
-                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
-                    ),
-                    cheats_rust.ObjectType.Wall,
-                )
-                for o in self.game.tiled_map.static_objs
-            ]
-            static_objects += [
-                (
-                    cheats_rust.Hitbox(
-                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
-                    ),
-                    cheats_rust.ObjectType.Spike,
-                )
-                for o in self.game.objects
-                if o.nametype == "Spike"
-            ]
-            static_objects += [
-                (
-                    cheats_rust.Hitbox(
-                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
-                    ),
-                    cheats_rust.ObjectType.SpeedTile,
-                )
-                for o in self.game.objects
-                if o.nametype == "SpeedTile"
-            ]
-            enviroments = [
-                cheats_rust.EnvModifier(
-                    hitbox=cheats_rust.Hitbox(
-                        outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
-                    ),
-                    jump_speed=o.modifier.jump_speed,
-                    jump_height=o.modifier.jump_height,
-                    walk_speed=o.modifier.walk_speed,
-                    run_speed=o.modifier.run_speed,
-                    gravity=o.modifier.gravity,
-                    jump_override=o.modifier.jump_override,
-                )
-                for o in self.game.physics_engine.env_tiles
-            ]
-
-            player_direction = None
-            match player.direction:
-                case player.DIR_N:
-                    player_direction = cheats_rust.Direction.N
-                case player.DIR_E:
-                    player_direction = cheats_rust.Direction.E
-                case player.DIR_S:
-                    player_direction = cheats_rust.Direction.S
-                case player.DIR_W:
-                    player_direction = cheats_rust.Direction.W
-
-            initial_state = cheats_rust.PhysState(
-                player=cheats_rust.PlayerState(
-                    x=player.x,
-                    y=player.y,
-                    vx=player.x_speed,
-                    vy=player.y_speed,
-                    vpush=player.push_speed,
-                    direction=player_direction,
-                    can_control_movement=player.can_control_movement,
-                    in_the_air=player.in_the_air,
-                ),
-                settings=settings,
-            )
-            static_state = cheats_rust.StaticState(
-                objects=static_objects,
-                environments=enviroments,
-            )
             target_state = cheats_rust.PhysState(
                 player=cheats_rust.PlayerState(
                     x=target_x,
@@ -519,14 +568,12 @@ class Hackceler8(arcade.Window):
                     vx=0,
                     vy=0,
                     vpush=0,
-                    direction=player_direction,
+                    direction=cheats_rust.Direction.N,
                     can_control_movement=False,
                     in_the_air=False,
                 ),
                 settings=settings,
             )
-
-            cheats_rust.set_rounded_speeds([round(constants.TICK_S * i, 5) for i in range(10000)])
 
             path = cheats_rust.astar_search(
                 settings=settings,

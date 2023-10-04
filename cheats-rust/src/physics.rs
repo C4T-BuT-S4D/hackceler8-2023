@@ -1,7 +1,11 @@
 use core::hash::Hash;
 use std::hash::Hasher;
 
-use pyo3::{pyclass, pymethods};
+use pyo3::types::PyModule;
+use pyo3::{pyclass, pyfunction, pymethods, Python};
+use static_init::dynamic;
+use std::collections::HashMap;
+use std::hash;
 
 use crate::{
     env_modifier::EnvModifier,
@@ -71,17 +75,53 @@ impl PlayerState {
     }
 }
 
-pub static mut ROUNDED_SPEEDS: [f64; 10000] = [0.0; 10000];
+#[derive(Debug, Copy, Clone)]
+struct HashableF64(f64);
+
+impl HashableF64 {
+    fn key(&self) -> u64 {
+        self.0.to_bits()
+    }
+}
+
+impl hash::Hash for HashableF64 {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: hash::Hasher,
+    {
+        self.key().hash(state)
+    }
+}
+
+impl PartialEq for HashableF64 {
+    fn eq(&self, other: &HashableF64) -> bool {
+        self.key() == other.key()
+    }
+}
+
+impl Eq for HashableF64 {}
+
+#[dynamic(0)]
+static mut ROUND_CACHE: HashMap<HashableF64, HashableF64> = HashMap::new();
 
 fn round_speed(x: f64) -> f64 {
-    assert!(x.round() == x);
-    let i = x.round() as i32;
     unsafe {
-        if i >= 0 {
-            ROUNDED_SPEEDS[i as usize]
-        } else {
-            -ROUNDED_SPEEDS[(-i) as usize]
-        }
+        (ROUND_CACHE)
+            .entry(HashableF64(x))
+            .or_insert_with(|| {
+                HashableF64(Python::with_gil(|py| {
+                    let builtins = PyModule::import(py, "builtins").unwrap();
+                    let ret: f64 = builtins
+                        .getattr("round")
+                        .unwrap()
+                        .call1((TICK_S * x, 5))
+                        .unwrap()
+                        .extract()
+                        .unwrap();
+                    ret
+                }))
+            })
+            .0
     }
 }
 
@@ -442,4 +482,15 @@ fn precision_f64(x: f64, decimals: u32) -> f64 {
 
         (x * shift_factor).round() / shift_factor
     }
+}
+
+#[pyfunction]
+pub fn get_transition(
+    static_state: StaticState,
+    mut state: PhysState,
+    next_move: Move,
+    shift_pressed: bool,
+) -> PlayerState {
+    state.tick(next_move, shift_pressed, &static_state);
+    state.player
 }
