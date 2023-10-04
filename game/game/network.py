@@ -67,9 +67,9 @@ class ListeningSocket:
         s, addr = self.socket.accept()
 
         # TODO: Configurable SSL cert path
-        # s = perform_ssl_handshake(
-        #     s, "../ca/dev-server", is_server=True, expected_cn=self.expected_cn
-        # )
+        s = perform_ssl_handshake(
+            s, "../ca/dev-server", is_server=True, expected_cn=self.expected_cn
+        )
 
         if not s:
             raise Exception("Authentication failure")
@@ -102,7 +102,7 @@ class NetworkConnection:
 
         try:
             s.connect((address, port))
-            # s = perform_ssl_handshake(s, cert, is_server=False)
+            s = perform_ssl_handshake(s, cert, is_server=False)
             if not s:
                 logging.critical("SSL handshake failed")
                 return None
