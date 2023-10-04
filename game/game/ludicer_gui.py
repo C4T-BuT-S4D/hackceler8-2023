@@ -365,8 +365,7 @@ class Hackceler8(arcade.Window):
 
         if (
             self.slow_ticks_mode
-            and symbol == arcade.key.T
-            and modifiers & arcade.key.MOD_CTRL
+            and symbol == arcade.key.BACKSPACE
             and self.game is not None
         ):
             self.game.tick()
