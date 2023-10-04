@@ -1,9 +1,12 @@
-from typing import Callable
-from threading import RLock
 from copy import deepcopy
+from threading import RLock
+from typing import Callable
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, BooleanField, SubmitField
+from wtforms import BooleanField
+from wtforms import IntegerField
+from wtforms import StringField
+from wtforms import SubmitField
 
 
 class Settings(FlaskForm):

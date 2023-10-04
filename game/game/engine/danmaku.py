@@ -16,6 +16,7 @@ import math
 from collections import deque
 
 import arcade
+
 import constants
 from components import danmaku
 

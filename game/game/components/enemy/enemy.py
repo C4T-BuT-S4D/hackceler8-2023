@@ -15,12 +15,13 @@
 import math
 
 import arcade
+
 import constants
+from components.projectile import Projectile
 from engine import generics
 from engine import hitbox
 from engine import modifier
 from engine.walk_data import WalkData
-from components.projectile import Projectile
 
 
 class Enemy(generics.GenericObject):

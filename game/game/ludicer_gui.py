@@ -15,14 +15,14 @@
 import logging
 
 import arcade
+import cheats_rust
 from arcade import gui
 from pyglet.image import load as pyglet_load
-import cheats_rust
 
 import constants
 import ludicer
-from map_loading.maps import GameMode
 from cheats.settings import get_settings
+from map_loading.maps import GameMode
 
 SCREEN_TITLE = "Hackceler8-23"
 

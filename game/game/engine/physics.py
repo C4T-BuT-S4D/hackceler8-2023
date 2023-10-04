@@ -15,12 +15,12 @@
 import logging
 
 from components.player import Player
-from engine import generics
-from engine import quadtree
 from constants import GRAVITY_CONSTANT
 from constants import PLAYER_JUMP_SPEED
 from constants import PLAYER_MOVEMENT_SPEED
 from constants import PLAYER_RUN_SPEED
+from engine import generics
+from engine import quadtree
 
 
 class PhysicsEngine:

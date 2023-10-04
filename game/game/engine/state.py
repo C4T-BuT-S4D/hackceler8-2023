@@ -14,7 +14,9 @@
 import logging
 
 import dill
-from components.magic_items import Item, load_from_save
+
+from components.magic_items import Item
+from components.magic_items import load_from_save
 
 
 def load_from_savefile(load_file):

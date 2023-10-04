@@ -14,8 +14,8 @@
 
 import logging
 
-import components.weapon_systems.base as weapon
 import components.projectile as projectile
+import components.weapon_systems.base as weapon
 import engine.hitbox as hitbox
 
 

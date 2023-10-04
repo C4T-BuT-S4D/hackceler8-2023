@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import NamedTuple, Optional
+from typing import NamedTuple
+from typing import Optional
+
+import arcade
 
 from map_loading import tilemap
-import arcade
 
 
 class GameMode(Enum):

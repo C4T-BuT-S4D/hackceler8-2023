@@ -12,34 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import copy
-from enum import Enum
-from threading import Thread, Lock
 import json
 import logging
 import os
 import time
+from copy import copy
+from enum import Enum
+from threading import Lock
+from threading import Thread
 
-import numpy as np
 import arcade
+import numpy as np
 import xxhash
 
 import constants
 from components import textbox
+from components.enemy.enemy import Enemy
 from components.inventory import Inventory
 from components.llm.llm import Llm
-from components.enemy.enemy import Enemy
 from components.switch import Switch
-from engine import physics, logic
-from engine.danmaku import DanmakuSystem
+from constants import PLAYER_MOVEMENT
+from engine import logic
+from engine import physics
 from engine.combat import CombatSystem
+from engine.danmaku import DanmakuSystem
 from engine.grenade import GrenadeSystem
 from engine.map_switcher import MapSwitch
 from engine.rng import RngSystem
-from engine.state import check_item_loaded, load_from_savefile
+from engine.state import check_item_loaded
+from engine.state import load_from_savefile
 from map_loading import maps
 from map_loading.maps import GameMode
-from constants import PLAYER_MOVEMENT
 
 
 class MagicItem(Enum):

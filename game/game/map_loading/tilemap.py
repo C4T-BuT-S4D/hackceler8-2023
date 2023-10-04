@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gzip
+import logging
+import pickle
+import uuid
 from collections import defaultdict
 from pathlib import Path
-import logging
-import uuid
-import pickle
-import gzip
 
 import arcade
 import pytiled_parser
 import xxhash
+
 from components import arena
 from components import boss
 from components import boss_gate
@@ -43,7 +44,8 @@ from components import weapon
 from components.enemy import enemy_types
 from components.npc import npc_types
 from engine import hitbox
-from engine.quadtree import Quadtree, Bounds
+from engine.quadtree import Bounds
+from engine.quadtree import Quadtree
 
 
 def image_tileset_to_texture(

@@ -16,11 +16,12 @@ import logging
 import math
 
 import arcade
-from engine import hitbox
+
 from components.soul import Soul
 from constants import SOUL_HP
 from constants import SOUL_SPEED
 from constants import SWING_TICKS
+from engine import hitbox
 
 
 class GrenadeSystem:

@@ -1,11 +1,16 @@
+import threading
 import time
 from copy import deepcopy
-import threading
 
-from flask import Flask, render_template, request
-from flask_bootstrap import Bootstrap
-from cheats.settings import Settings, get_settings, update_settings
 import requests
+from flask import Flask
+from flask import render_template
+from flask import request
+from flask_bootstrap import Bootstrap
+
+from cheats.settings import Settings
+from cheats.settings import get_settings
+from cheats.settings import update_settings
 
 
 def run_cheats_server(port: int) -> threading.Thread:

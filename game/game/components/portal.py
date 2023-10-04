@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import arcade
+
 from engine import generics
 from engine import hitbox
 

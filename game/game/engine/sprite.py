@@ -15,9 +15,10 @@
 import logging
 from pathlib import Path
 
-from PIL import Image
 import arcade
 import pytiled_parser
+from PIL import Image
+
 import constants
 from engine import animation
 
