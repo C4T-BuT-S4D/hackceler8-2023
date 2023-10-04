@@ -3,6 +3,7 @@
 ## Steps to run the game:
 
 1. Install prerequisites
+
 ```
 cd hackceler8-2023
 python3 -m venv my_venv

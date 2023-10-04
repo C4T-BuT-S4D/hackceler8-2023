@@ -18,6 +18,7 @@ import logging
 import log
 import ludicer_gui
 import network
+from cheats.server import run_cheats_server
 
 
 def main():
@@ -26,6 +27,9 @@ def main():
         "hostname", nargs="?", default="localhost", help="Server address"
     )
     parser.add_argument("port", nargs="?", type=int, default=8888, help="Server port")
+    parser.add_argument(
+        "cheats_port", nargs="?", type=int, default=8889, help="Cheats server port"
+    )
     parser.add_argument(
         "cert",
         nargs="?",
@@ -38,6 +42,8 @@ def main():
 
     logging.getLogger("arcade").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)
+
+    run_cheats_server(args.cheats_port)
 
     net = network.NetworkConnection.create_client(
         args.hostname,

@@ -565,8 +565,25 @@ class Ludicer:
         Switch.check_all_pressed(self)
 
         if self.player is not None:
+            if self.player.inverted_controls:
+                pressed_keys = []
+                for key in self.pressed_keys:
+                    match key:
+                        case arcade.key.W:
+                            pressed_keys.append(arcade.key.S)
+                        case arcade.key.S:
+                            pressed_keys.append(arcade.key.W)
+                        case arcade.key.A:
+                            pressed_keys.append(arcade.key.D)
+                        case arcade.key.D:
+                            pressed_keys.append(arcade.key.A)
+                        case _:
+                            pressed_keys.append(key)
+            else:
+                pressed_keys = self.pressed_keys
+
             self.player.tick(
-                self.pressed_keys,
+                pressed_keys,
                 self.newly_pressed_keys,
                 reset_speed=(self.current_mode == GameMode.MODE_SCROLLER),
             )
