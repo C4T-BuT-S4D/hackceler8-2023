@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import logging
+import uuid
 
 import arcade
 import cheats_rust
+from PIL import Image
 from arcade import gui
 from pyglet.image import load as pyglet_load
 
@@ -57,6 +59,9 @@ class Hackceler8(arcade.Window):
 
         self.camera = None
         self.gui_camera = None  # For stationary objects.
+
+        # for rendering the map. create once to avoid framebuffer object leak.
+        self.map_atlas = arcade.TextureAtlas((1, 1))
 
         self._setup()
         self.show_menu()
@@ -162,6 +167,79 @@ class Hackceler8(arcade.Window):
 
         self.camera.use()
         arcade.start_render()
+
+        self.draw_level()
+
+        self.gui_camera.use()
+
+        if self.game.danmaku_system is not None:
+            self.game.danmaku_system.draw_gui()
+
+        arcade.draw_text(
+            "HEALTH: %.02f" % self.game.player.health,
+            10,
+            10,
+            arcade.csscolor.RED,
+            18,
+            font_name=constants.FONT_NAME,
+        )
+
+        if self.game.player.dead:
+            arcade.draw_text(
+                "YOU DIED",
+                640,
+                640,
+                arcade.csscolor.RED,
+                64,
+                font_name=constants.FONT_NAME,
+                anchor_x="center",
+                anchor_y="center",
+            )
+
+        if self.game.won:
+            arcade.draw_text(
+                "CONGRATULATIONS, YOU WIN!",
+                450,
+                600,
+                arcade.csscolor.WHITE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
+            arcade.draw_text(
+                "TOTAL PLAY TIME: %s" % self.game.play_time_str(),
+                455,
+                550,
+                arcade.csscolor.WHITE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
+
+        if self.game.cheating_detected:
+            arcade.draw_text(
+                "OUT OF SYNC, CHEATING DETECTED",
+                400,
+                600,
+                arcade.csscolor.ORANGE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
+
+        if self.game.display_inventory:
+            if (
+                not self.game.prev_display_inventory
+                or self.game.inventory.display_time != self.game.play_time_str()
+            ):
+                self.game.inventory.update_display()
+            self.game.inventory.draw()
+
+        if self.game.textbox is not None:
+            self.game.textbox.draw()
+        if self.game.map_switch is not None:
+            self.game.map_switch.draw()
+
+        arcade.finish_render()
+
+    def draw_level(self):
         self.game.tiled_map.texts[1].draw_scaled(0, 0)
         if self.game.prerender is None:
             self.game.scene.draw()
@@ -259,74 +337,27 @@ class Hackceler8(arcade.Window):
                     border_width=1,
                 )
 
-        self.gui_camera.use()
+    def render_map(self):
+        tiled_map_size = self.game.tiled_map.parsed_map.map_size
+        tile_size = self.game.tiled_map.parsed_map.tile_size
 
-        if self.game.danmaku_system is not None:
-            self.game.danmaku_system.draw_gui()
+        map_width = round(tiled_map_size.width * tile_size.width)
+        map_height = round(tiled_map_size.height * tile_size.height)
 
-        arcade.draw_text(
-            "HEALTH: %.02f" % self.game.player.health,
-            10,
-            10,
-            arcade.csscolor.RED,
-            18,
-            font_name=constants.FONT_NAME,
+        map_texture = arcade.Texture.create_empty(
+            str(uuid.uuid4()), (map_width, map_height)
         )
 
-        if self.game.player.dead:
-            arcade.draw_text(
-                "YOU DIED",
-                640,
-                640,
-                arcade.csscolor.RED,
-                64,
-                font_name=constants.FONT_NAME,
-                anchor_x="center",
-                anchor_y="center",
-            )
+        self.map_atlas.add(map_texture)
 
-        if self.game.won:
-            arcade.draw_text(
-                "CONGRATULATIONS, YOU WIN!",
-                450,
-                600,
-                arcade.csscolor.WHITE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
-            arcade.draw_text(
-                "TOTAL PLAY TIME: %s" % self.game.play_time_str(),
-                455,
-                550,
-                arcade.csscolor.WHITE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
+        with self.map_atlas.render_into(map_texture) as fb:
+            fb.clear()
+            self.draw_level()
+            data = fb.read(viewport=fb.viewport, components=4)
+            image = Image.frombytes("RGBA", (map_width, map_height), bytes(data))
+            image.save("rendered-map.png")
 
-        if self.game.cheating_detected:
-            arcade.draw_text(
-                "OUT OF SYNC, CHEATING DETECTED",
-                400,
-                600,
-                arcade.csscolor.ORANGE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
-
-        if self.game.display_inventory:
-            if (
-                not self.game.prev_display_inventory
-                or self.game.inventory.display_time != self.game.play_time_str()
-            ):
-                self.game.inventory.update_display()
-            self.game.inventory.draw()
-
-        if self.game.textbox is not None:
-            self.game.textbox.draw()
-        if self.game.map_switch is not None:
-            self.game.map_switch.draw()
-
-        arcade.finish_render()
+        self.map_atlas.clear()
 
     def on_update(self, _delta_time: float):
         if self.game is None:
@@ -378,7 +409,10 @@ class Hackceler8(arcade.Window):
             )
             return
 
-        if symbol == arcade.key.M:
+        if symbol == arcade.key.M and not (modifiers & arcade.key.MOD_CTRL):
+            self.render_map()
+
+        if symbol == arcade.key.M and modifiers & arcade.key.MOD_CTRL:
             logging.info("Showing menu")
             self.show_menu()
             return
