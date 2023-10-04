@@ -155,6 +155,7 @@ class Ludicer:
 
         self.newly_pressed_keys = set()
         self.prev_pressed_keys = set()
+        self.prev_pressed_keys_save = set()
         self.tracked_keys = {
             # Movement
             arcade.key.W,
@@ -435,7 +436,7 @@ class Ludicer:
         msg = {
             "tics": self.tics,
             "state": self.state_hash,
-            "keys": list(self.raw_pressed_keys),
+            "keys": list(self.pressed_keys),
             "text_input": self.get_text_input(),
             "llm_ack": llm_ack,
         }
@@ -480,6 +481,8 @@ class Ludicer:
         self.dump_state()
         self.pressed_keys = self.tracked_keys & self.raw_pressed_keys
         self.newly_pressed_keys = self.pressed_keys.difference(self.prev_pressed_keys)
+
+        self.prev_pressed_keys_save = self.prev_pressed_keys.copy()
         self.prev_pressed_keys = self.pressed_keys.copy()
 
         self.prev_display_inventory = self.display_inventory
@@ -564,26 +567,28 @@ class Ludicer:
         Enemy.check_control_inversion(self)
         Switch.check_all_pressed(self)
 
-        if self.player is not None:
-            if self.player.inverted_controls:
-                pressed_keys = []
-                for key in self.pressed_keys:
-                    match key:
-                        case arcade.key.W:
-                            pressed_keys.append(arcade.key.S)
-                        case arcade.key.S:
-                            pressed_keys.append(arcade.key.W)
-                        case arcade.key.A:
-                            pressed_keys.append(arcade.key.D)
-                        case arcade.key.D:
-                            pressed_keys.append(arcade.key.A)
-                        case _:
-                            pressed_keys.append(key)
-            else:
-                pressed_keys = self.pressed_keys
+        if not self.is_server and self.player is not None and self.player.inverted_controls:
+            pressed_keys = set()
+            for key in self.pressed_keys:
+                match key:
+                    case arcade.key.W:
+                        pressed_keys.add(arcade.key.S)
+                    case arcade.key.S:
+                        pressed_keys.add(arcade.key.W)
+                    case arcade.key.A:
+                        pressed_keys.add(arcade.key.D)
+                    case arcade.key.D:
+                        pressed_keys.add(arcade.key.A)
+                    case _:
+                        pressed_keys.add(key)
 
+            self.pressed_keys = pressed_keys
+            self.newly_pressed_keys = self.pressed_keys.difference(self.prev_pressed_keys_save)
+            self.prev_pressed_keys = self.pressed_keys.copy()
+
+        if self.player is not None:
             self.player.tick(
-                pressed_keys,
+                self.pressed_keys,
                 self.newly_pressed_keys,
                 reset_speed=(self.current_mode == GameMode.MODE_SCROLLER),
             )
