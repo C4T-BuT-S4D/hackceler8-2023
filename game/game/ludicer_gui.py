@@ -13,16 +13,19 @@
 # limitations under the License.
 
 import logging
+import os
 import uuid
 
 import arcade
 import cheats_rust
-from PIL import Image
 from arcade import gui
+from PIL import Image
 from pyglet.image import load as pyglet_load
 
 import constants
 import ludicer
+from cheats.maps import render_finish
+from cheats.maps import render_requested
 from cheats.settings import get_settings
 from map_loading.maps import GameMode
 
@@ -62,6 +65,9 @@ class Hackceler8(arcade.Window):
 
         # for rendering the map. create once to avoid framebuffer object leak.
         self.map_atlas = arcade.TextureAtlas((1, 1))
+
+        # cache from width, height to texture used for re-rendering maps of the same size
+        self.map_texture_cache: dict[(int, int), arcade.Texture] = dict()
 
         self._setup()
         self.show_menu()
@@ -344,24 +350,33 @@ class Hackceler8(arcade.Window):
         map_width = round(tiled_map_size.width * tile_size.width)
         map_height = round(tiled_map_size.height * tile_size.height)
 
-        map_texture = arcade.Texture.create_empty(
-            str(uuid.uuid4()), (map_width, map_height)
-        )
+        map_texture = self.map_texture_cache.get((map_width, map_height))
+        if map_texture is None:
+            map_texture = arcade.Texture.create_empty(
+                str(uuid.uuid4()), (map_width, map_height)
+            )
+            self.map_texture_cache[(map_width, map_height)] = map_texture
 
         self.map_atlas.add(map_texture)
 
         with self.map_atlas.render_into(map_texture) as fb:
             fb.clear()
             self.draw_level()
-            data = fb.read(viewport=fb.viewport, components=4)
-            image = Image.frombytes("RGBA", (map_width, map_height), bytes(data))
-            image.save("rendered-map.png")
-
-        self.map_atlas.clear()
+            data = fb.read(viewport=fb.viewport, components=3)
+            image = Image.frombytes("RGB", (map_width, map_height), bytes(data))
+            image.save(
+                os.path.join(
+                    os.path.dirname(__file__), "cheats", "static", "current-map.png"
+                )
+            )
 
     def on_update(self, _delta_time: float):
         if self.game is None:
             return
+
+        if render_requested():
+            self.render_map()
+            render_finish()
 
         if self.slow_ticks_mode:
             return
@@ -409,10 +424,7 @@ class Hackceler8(arcade.Window):
             )
             return
 
-        if symbol == arcade.key.M and not (modifiers & arcade.key.MOD_CTRL):
-            self.render_map()
-
-        if symbol == arcade.key.M and modifiers & arcade.key.MOD_CTRL:
+        if symbol == arcade.key.M:
             logging.info("Showing menu")
             self.show_menu()
             return

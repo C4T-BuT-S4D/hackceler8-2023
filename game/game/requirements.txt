@@ -7,3 +7,4 @@ maturin
 flask
 flask-bootstrap
 flask-wtf
+Flask-AutoIndex
