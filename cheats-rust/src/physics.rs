@@ -1,8 +1,8 @@
 use core::hash::Hash;
-use std::collections::HashMap;
 use std::hash;
 use std::hash::Hasher;
 
+use hashbrown::HashMap;
 use pyo3::types::PyModule;
 use pyo3::{pyclass, pyfunction, pymethods, Python};
 use static_init::dynamic;
@@ -24,8 +24,37 @@ pub const GRAVITY_CONSTANT: f64 = 6.0;
 pub const PUSH_DELTA: f64 = 125.0;
 pub const PUSH_SPEED: f64 = 2500.0;
 
+#[dynamic]
+static mut ROUND_CACHE: HashMap<HashableF64, f64> = HashMap::new();
+
+#[derive(Debug, Copy, Clone)]
+struct HashableF64(f64);
+
+impl HashableF64 {
+    fn key(&self) -> u64 {
+        self.0.to_bits()
+    }
+}
+
+impl hash::Hash for HashableF64 {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: hash::Hasher,
+    {
+        self.key().hash(state)
+    }
+}
+
+impl PartialEq for HashableF64 {
+    fn eq(&self, other: &HashableF64) -> bool {
+        self.key() == other.key()
+    }
+}
+
+impl Eq for HashableF64 {}
+
 #[pyclass]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PlayerState {
     #[pyo3(get, set)]
     pub x: f64,
@@ -103,56 +132,6 @@ impl PlayerState {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-struct HashableF64(f64);
-
-impl HashableF64 {
-    fn key(&self) -> u64 {
-        self.0.to_bits()
-    }
-}
-
-impl hash::Hash for HashableF64 {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: hash::Hasher,
-    {
-        self.key().hash(state)
-    }
-}
-
-impl PartialEq for HashableF64 {
-    fn eq(&self, other: &HashableF64) -> bool {
-        self.key() == other.key()
-    }
-}
-
-impl Eq for HashableF64 {}
-
-#[dynamic(0)]
-static mut ROUND_CACHE: HashMap<HashableF64, HashableF64> = HashMap::new();
-
-fn round_speed(x: f64) -> f64 {
-    unsafe {
-        (ROUND_CACHE)
-            .entry(HashableF64(x))
-            .or_insert_with(|| {
-                HashableF64(Python::with_gil(|py| {
-                    let builtins = PyModule::import(py, "builtins").unwrap();
-                    let ret: f64 = builtins
-                        .getattr("round")
-                        .unwrap()
-                        .call1((TICK_S * x, 5))
-                        .unwrap()
-                        .extract()
-                        .unwrap();
-                    ret
-                }))
-            })
-            .0
-    }
-}
-
 impl PlayerState {
     pub fn center(&self) -> Pointf {
         Pointf {
@@ -171,7 +150,77 @@ impl PlayerState {
     }
 
     fn update_position(&mut self) {
-        self.move_by(round_speed(self.vx), round_speed(self.vy));
+        let (dx, dy) = self.round_speeds(self.vx, self.vy);
+        self.move_by(dx, dy);
+    }
+
+    fn round_speeds(&self, x: f64, y: f64) -> (f64, f64) {
+        let hx = HashableF64(x);
+        let hy = HashableF64(y);
+
+        let read = ROUND_CACHE.read();
+
+        let mut dx = read.get(&hx).copied();
+        let mut dy = read.get(&hy).copied();
+
+        drop(read);
+
+        if let Some(dx) = dx && let Some(dy) = dy {
+            return (dx, dy);
+        }
+
+        let mut write = ROUND_CACHE.write();
+
+        if dx.is_none() {
+            dx = write.get(&hx).copied();
+        }
+        if dy.is_none() {
+            dy = write.get(&hy).copied();
+        }
+
+        let dx_set = dx.is_some();
+        let dy_set = dy.is_some();
+
+        if dx_set && dy_set {
+            return (dx.unwrap(), dy.unwrap());
+        }
+
+        Python::with_gil(|py| {
+            let builtins = PyModule::import(py, "builtins").unwrap();
+
+            if !dx_set {
+                dx = Some(
+                    builtins
+                        .getattr("round")
+                        .unwrap()
+                        .call1((TICK_S * x, 5))
+                        .unwrap()
+                        .extract()
+                        .unwrap(),
+                );
+            }
+
+            if !dy_set {
+                dy = Some(
+                    builtins
+                        .getattr("round")
+                        .unwrap()
+                        .call1((TICK_S * y, 5))
+                        .unwrap()
+                        .extract()
+                        .unwrap(),
+                );
+            }
+        });
+
+        if !dx_set {
+            write.insert(hx, dx.unwrap());
+        }
+        if !dy_set {
+            write.insert(hy, dy.unwrap());
+        }
+
+        (dx.unwrap(), dy.unwrap())
     }
 
     fn update_movement(
@@ -277,7 +326,7 @@ impl PlayerState {
 }
 
 #[pyclass]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PhysState {
     pub player: PlayerState,
     settings: PhysicsSettings,
@@ -406,8 +455,7 @@ impl PhysState {
 
 impl PhysState {
     fn get_active_modifier<'a>(&self, state: &'a StaticState) -> Option<&'a EnvModifier> {
-        self.active_modifier
-            .and_then(|i| Some(&state.environments[i]))
+        self.active_modifier.map(|i| &state.environments[i])
     }
 
     fn gravity(&self, active_lifetime: Option<&EnvModifier>) -> f64 {
@@ -501,10 +549,8 @@ impl PartialEq for PhysState {
             }
         }
 
-        if self.settings.mode == GameMode::Platformer {
-            if self.player.vy != other.player.vy {
-                return false;
-            }
+        if self.settings.mode == GameMode::Platformer && self.player.vy != other.player.vy {
+            return false;
         }
 
         true
