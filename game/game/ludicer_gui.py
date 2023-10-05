@@ -538,22 +538,21 @@ class Hackceler8(arcade.Window):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if self.game is None:
             return
+        player = self.game.player
 
+        target_x = x + self.camera.position.x
+        target_y = y + self.camera.position.y
+
+        logging.info(
+            "mouse pressed at (%s, %s), player pos: (%s, %s), target: (%s, %s)",
+            x,
+            y,
+            player.x,
+            player.y,
+            target_x,
+            target_y,
+        )
         if button == arcade.MOUSE_BUTTON_LEFT and modifiers & arcade.key.MOD_CTRL:
-            player = self.game.player
-
-            target_x = x + self.camera.position.x
-            target_y = y + self.camera.position.y
-
-            logging.info(
-                "mouse pressed at (%s, %s), player pos: (%s, %s), target: (%s, %s)",
-                x,
-                y,
-                player.x,
-                player.y,
-                target_x,
-                target_y,
-            )
 
             settings, initial_state, static_state = self.to_rust_state()
 

@@ -13,7 +13,7 @@ use crate::{
     StaticState,
 };
 
-const HEURISTIC_WEIGHT: f64 = 5.0;
+const HEURISTIC_WEIGHT: f64 = 1.0;
 const TARGET_PRECISION: f64 = 16.0;
 
 #[pyclass]
@@ -59,6 +59,7 @@ fn heuristic(target_state: &PlayerState, current_state: &PlayerState) -> f64 {
     // let yticks = (target_state.y - current_state.y).abs() / (PLAYER_JUMP_SPEED * TICK_S);
     // f64::max(xticks, yticks) * HEURISTIC_WEIGHT
     (target_state.center() - current_state.center()).len() * HEURISTIC_WEIGHT
+    //0.0
 }
 
 #[pyfunction]
