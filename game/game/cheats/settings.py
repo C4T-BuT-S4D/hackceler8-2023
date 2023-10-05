@@ -7,6 +7,7 @@ from wtforms import BooleanField
 from wtforms import IntegerField
 from wtforms import StringField
 from wtforms import SubmitField
+from wtforms import FloatField
 
 
 class Settings(FlaskForm):
@@ -31,6 +32,30 @@ class Settings(FlaskForm):
         default="all",
         label="Allowed moves",
         description="Allowed moves in search, use to limit search space",
+    )
+
+    heuristic_weight = FloatField(
+        default=1,
+        label="Heuristic weight",
+        description="Weight of heuristic in A* search",
+    )
+
+    simple_geometry = BooleanField(
+        default=False,
+        label="Simple geometry",
+        description="Only use integer height/width in state",
+    )
+
+    object_hitbox = IntegerField(
+        default=3,
+        label="Object hitbox width",
+        description="Width of object hitbox in pixels",
+    )
+
+    extend_deadly_hitbox = IntegerField(
+        default=1,
+        label="Extend deadly hitbox",
+        description="Extend deadly hitbox by this amount of pixels",
     )
 
     submit_button = SubmitField("Submit Form")

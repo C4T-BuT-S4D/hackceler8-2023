@@ -1,19 +1,15 @@
-use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashMap},
-    time::SystemTime,
-};
+use std::{cmp::Ordering, collections::BinaryHeap, time::SystemTime};
 
+use hashbrown::HashMap;
 use pyo3::{pyclass, pyfunction, pymethods};
 
 use crate::{
     moves::Move,
-    physics::{PhysState, PlayerState},
-    settings::SearchSettings,
+    physics::{PhysState, PlayerState, PLAYER_JUMP_SPEED, PLAYER_MOVEMENT_SPEED, TICK_S},
+    settings::{GameMode, SearchSettings},
     StaticState,
 };
 
-const HEURISTIC_WEIGHT: f64 = 5.0;
 const TARGET_PRECISION: f64 = 16.0;
 
 #[pyclass]
@@ -54,11 +50,22 @@ impl PartialOrd for SearchNode {
     }
 }
 
-fn heuristic(target_state: &PlayerState, current_state: &PlayerState) -> f64 {
-    // let xticks = (target_state.x - current_state.x).abs() / (PLAYER_MOVEMENT_SPEED * 1.5 * TICK_S);
-    // let yticks = (target_state.y - current_state.y).abs() / (PLAYER_JUMP_SPEED * TICK_S);
-    // f64::max(xticks, yticks) * HEURISTIC_WEIGHT
-    (target_state.center() - current_state.center()).len() * HEURISTIC_WEIGHT
+fn heuristic(
+    settings: &SearchSettings,
+    target_state: &PlayerState,
+    current_state: &PlayerState,
+) -> f64 {
+    let y_speed = if settings.mode == GameMode::Platformer {
+        PLAYER_JUMP_SPEED
+    } else {
+        PLAYER_MOVEMENT_SPEED
+    };
+
+    let xticks = (target_state.x - current_state.x).abs() / (PLAYER_MOVEMENT_SPEED * 1.5 * TICK_S);
+    let yticks = (target_state.y - current_state.y).abs() / (y_speed * TICK_S);
+    f64::max(xticks, yticks) * settings.heuristic_weight
+    // (target_state.center() - current_state.center()).len() * settings.heuristic_weight
+    //0.0
 }
 
 #[pyfunction]
@@ -67,7 +74,7 @@ pub fn astar_search(
     mut initial_state: PhysState,
     target_state: PhysState,
     static_state: StaticState,
-) -> Option<Vec<(Move, bool)>> {
+) -> Option<Vec<(Move, bool, PlayerState)>> {
     println!("running astar search with settings {settings:?}");
 
     initial_state.detect_env_mod(&static_state);
@@ -76,7 +83,7 @@ pub fn astar_search(
     let mut came_from: HashMap<PhysState, (PhysState, Move, bool)> = HashMap::new();
     let mut g_score: HashMap<PhysState, i32> = HashMap::new();
     open_set.push(SearchNode::new(
-        heuristic(&target_state.player, &initial_state.player),
+        heuristic(&settings, &target_state.player, &initial_state.player),
         0,
         initial_state.clone(),
     ));
@@ -137,7 +144,7 @@ pub fn astar_search(
 
                 if neighbor_state.close_enough(&target_state, TARGET_PRECISION) {
                     let mut moves = reconstruct_path(&came_from, state);
-                    moves.push((next_move, shift_pressed));
+                    moves.push((next_move, shift_pressed, neighbor_state.player));
                     println!(
                         "found path: iter={:?}; ticks={:?}; elapsed={:?}",
                         iter,
@@ -157,8 +164,8 @@ pub fn astar_search(
                 {
                     continue;
                 }
-                let f_score =
-                    f64::from(ticks + 1) + heuristic(&target_state.player, &neighbor_state.player);
+                let f_score = f64::from(ticks + 1)
+                    + heuristic(&settings, &target_state.player, &neighbor_state.player);
                 came_from.insert(
                     neighbor_state.clone(),
                     (state.clone(), next_move, shift_pressed),
@@ -175,12 +182,12 @@ pub fn astar_search(
 fn reconstruct_path(
     came_from: &HashMap<PhysState, (PhysState, Move, bool)>,
     current_node: PhysState,
-) -> Vec<(Move, bool)> {
+) -> Vec<(Move, bool, PlayerState)> {
     let mut path = Vec::new();
     let mut current = current_node;
 
     while let Some((prev, move_direction, shift_pressed)) = came_from.get(&current) {
-        path.push((*move_direction, *shift_pressed));
+        path.push((*move_direction, *shift_pressed, current.player));
         current = prev.clone();
     }
 

@@ -5,7 +5,7 @@ use geometry::Pointf;
 use hitbox::Hitbox;
 use moves::{Direction, Move};
 use objects::ObjectType;
-use physics::{PhysState, PlayerState};
+use physics::{get_transition, PhysState, PlayerState};
 use settings::{GameMode, PhysicsSettings, SearchSettings};
 
 use crate::search::astar_search;
@@ -36,5 +36,6 @@ fn cheats_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Direction>()?;
     m.add_class::<EnvModifier>()?;
     m.add_function(wrap_pyfunction!(astar_search, m)?)?;
+    m.add_function(wrap_pyfunction!(get_transition, m)?)?;
     Ok(())
 }

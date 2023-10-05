@@ -12,12 +12,8 @@ pub enum ObjectType {
     Wall,
     Spike,
     SpeedTile,
-}
-
-impl ObjectType {
-    pub fn is_deadly(&self) -> bool {
-        *self == Self::Spike
-    }
+    Arena,
+    Portal,
 }
 
 #[derive(Debug, Clone)]

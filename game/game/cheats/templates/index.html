@@ -3,11 +3,15 @@
 
 {% block content %}
 <div class="abobus">
-  {{ wtf.quick_form(form, button_map={'submit_button': 'primary'}) }}
+    {{ wtf.quick_form(form, button_map={'submit_button': 'primary'}) }}
+</div>
+<div class="abobus">
+    <a href="{{ url_for('map') }}">Map</a>
+    <a href="{{ url_for('autoindex') }}">Map history</a>
 </div>
 <style>
-  .abobus {
-    padding: 10px;
-  }
+    .abobus {
+        padding: 10px;
+    }
 </style>
 {% endblock %}
