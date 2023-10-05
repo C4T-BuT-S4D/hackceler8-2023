@@ -4,10 +4,10 @@ from typing import Callable
 
 from flask_wtf import FlaskForm
 from wtforms import BooleanField
+from wtforms import FloatField
 from wtforms import IntegerField
 from wtforms import StringField
 from wtforms import SubmitField
-from wtforms import FloatField
 
 
 class Settings(FlaskForm):
