@@ -72,6 +72,10 @@ class Settings(FlaskForm):
         default=True, label="Draw boxes", description="Draw objects boxes"
     )
 
+    draw_lines = BooleanField(
+        default=True, label="Draw lines", description="Draw lines to important objects"
+    )
+
     submit_button = SubmitField("Submit Form")
 
 
