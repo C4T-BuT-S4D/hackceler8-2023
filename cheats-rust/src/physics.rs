@@ -25,7 +25,7 @@ pub const PUSH_DELTA: f64 = 125.0;
 pub const PUSH_SPEED: f64 = 2500.0;
 
 #[dynamic]
-static mut ROUND_CACHE: HashMap<HashableF64, HashableF64> = HashMap::new();
+static mut ROUND_CACHE: HashMap<HashableF64, f64> = HashMap::new();
 
 #[derive(Debug, Copy, Clone)]
 struct HashableF64(f64);
@@ -150,38 +150,77 @@ impl PlayerState {
     }
 
     fn update_position(&mut self) {
-        self.move_by(self.round_speed(self.vx), self.round_speed(self.vy));
+        let (dx, dy) = self.round_speeds(self.vx, self.vy);
+        self.move_by(dx, dy);
     }
 
-    fn round_speed(&self, x: f64) -> f64 {
+    fn round_speeds(&self, x: f64, y: f64) -> (f64, f64) {
         let hx = HashableF64(x);
+        let hy = HashableF64(y);
 
         let read = ROUND_CACHE.read();
-        if let Some(res) = read.get(&hx) {
-            return res.0;
-        }
+
+        let mut dx = read.get(&hx).copied();
+        let mut dy = read.get(&hy).copied();
 
         drop(read);
 
-        let mut write = ROUND_CACHE.write();
-        if let Some(res) = write.get(&hx) {
-            return res.0;
+        if let Some(dx) = dx && let Some(dy) = dy {
+            return (dx, dy);
         }
 
-        let res = HashableF64(Python::with_gil(|py| {
-            let builtins = PyModule::import(py, "builtins").unwrap();
-            let ret: f64 = builtins
-                .getattr("round")
-                .unwrap()
-                .call1((TICK_S * x, 5))
-                .unwrap()
-                .extract()
-                .unwrap();
-            ret
-        }));
-        write.insert(hx, res);
+        let mut write = ROUND_CACHE.write();
 
-        res.0
+        if dx.is_none() {
+            dx = write.get(&hx).copied();
+        }
+        if dy.is_none() {
+            dy = write.get(&hy).copied();
+        }
+
+        let dx_set = dx.is_some();
+        let dy_set = dy.is_some();
+
+        if dx_set && dy_set {
+            return (dx.unwrap(), dy.unwrap());
+        }
+
+        Python::with_gil(|py| {
+            let builtins = PyModule::import(py, "builtins").unwrap();
+
+            if !dx_set {
+                dx = Some(
+                    builtins
+                        .getattr("round")
+                        .unwrap()
+                        .call1((TICK_S * x, 5))
+                        .unwrap()
+                        .extract()
+                        .unwrap(),
+                );
+            }
+
+            if !dy_set {
+                dy = Some(
+                    builtins
+                        .getattr("round")
+                        .unwrap()
+                        .call1((TICK_S * y, 5))
+                        .unwrap()
+                        .extract()
+                        .unwrap(),
+                );
+            }
+        });
+
+        if !dx_set {
+            write.insert(hx, dx.unwrap());
+        }
+        if !dy_set {
+            write.insert(hy, dy.unwrap());
+        }
+
+        (dx.unwrap(), dy.unwrap())
     }
 
     fn update_movement(
