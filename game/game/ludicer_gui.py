@@ -17,19 +17,18 @@ import os
 import uuid
 
 import arcade
+import cheats_rust
 from arcade import gui
 from PIL import Image
-
 from pyglet.image import load as pyglet_load
 
+import cheats.lib.geom as cheats_geom
 import constants
 import ludicer
 from cheats.maps import render_finish
 from cheats.maps import render_requested
 from cheats.settings import get_settings
 from map_loading.maps import GameMode
-
-import cheats_rust
 
 SCREEN_TITLE = "Hackceler8-23"
 
@@ -289,6 +288,7 @@ class Hackceler8(arcade.Window):
         if self.game.danmaku_system is not None:
             self.game.danmaku_system.draw()
 
+        cheats_settings = get_settings()
         for o in (
             self.game.tiled_map.objs
             + self.game.tiled_map.static_objs
@@ -342,7 +342,7 @@ class Hackceler8(arcade.Window):
                     rect.y2(),
                     rect.y1(),
                     color,
-                    border_width=1,
+                    border_width=cheats_settings["object_hitbox"],
                 )
 
     def render_map(self):
@@ -373,9 +373,8 @@ class Hackceler8(arcade.Window):
             )
 
     def tick_game(self):
-        #print('h', self.game.player.get_height(), 'w', self.game.player.get_width(), 'x', self.game.player.x, 'y', self.game.player.y)
         settings, state, static_state = self.to_rust_state()
-        keys = set(self.game.raw_pressed_keys) # copy
+        keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
             shift = True
             keys.remove(arcade.key.LSHIFT)
@@ -401,17 +400,19 @@ class Hackceler8(arcade.Window):
         elif keys == set():
             move = cheats_rust.Move.NONE
         else:
-            print('unknown moves')
+            print("unknown moves")
             self.game.tick()
-            return 
+            return
         expected = cheats_rust.get_transition(static_state, state, move, shift)
         self.game.tick()
-        attrs = [('x','x'), ('y','y'), ('x_speed','vx'), ('y_speed','vy')]
-        vals = [(getattr(self.game.player, k1), getattr(expected, k2)) for k1, k2 in attrs]
-        if not all(x == y for x,y in vals):
-            print('incorrect transition:')
-            for (k1,k2), (v1,v2) in zip(attrs, vals):
-                print(k1, 'predicted', v2, 'got', v1)
+        attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
+        vals = [
+            (getattr(self.game.player, k1), getattr(expected, k2)) for k1, k2 in attrs
+        ]
+        if not all(x == y for x, y in vals):
+            print("incorrect transition:")
+            for (k1, k2), (v1, v2) in zip(attrs, vals):
+                print(k1, "predicted", v2, "got", v1)
             print()
 
     def on_update(self, _delta_time: float):
@@ -493,26 +494,22 @@ class Hackceler8(arcade.Window):
                 mode = cheats_rust.GameMode.Platformer
 
         cheat_settings = get_settings()
-        print("cheat settings:", cheat_settings)
         allowed_moves = []
         if cheat_settings["allowed_moves"].lower() not in {"", "all"}:
             moves = cheat_settings["allowed_moves"].upper().split(",")
             for move in moves:
                 allowed_moves.append(getattr(cheats_rust.Move, move))
-                
+
         settings = cheats_rust.SearchSettings(
             mode=mode,
-            timeout=cheat_settings['timeout'],
-            always_shift=cheat_settings['always_shift'],
-            disable_shift=cheat_settings['disable_shift'],
+            timeout=cheat_settings["timeout"],
+            always_shift=cheat_settings["always_shift"],
+            disable_shift=cheat_settings["disable_shift"],
             allowed_moves=allowed_moves,
+            heuristic_weight=cheat_settings["heuristic_weight"],
             enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
+            simple_geometry=cheat_settings["simple_geometry"],
         )
-
-        #print(
-        #    "Static objects:", {o.nametype for o in self.game.tiled_map.static_objs}
-        #)
-        #print("Game objects:", {o.nametype for o in self.game.objects})
 
         static_objects = [
             (
@@ -523,16 +520,23 @@ class Hackceler8(arcade.Window):
             )
             for o in self.game.tiled_map.static_objs
         ]
+
+        deadly_objects_type = {
+            "Spike": cheats_rust.ObjectType.Spike,
+            "Arena": cheats_rust.ObjectType.Arena,
+            "Portal": cheats_rust.ObjectType.Portal,
+        }
         static_objects += [
             (
-                cheats_rust.Hitbox(
-                    outline=[cheats_rust.Pointf(x=p.x, y=p.y) for p in o.outline],
+                cheats_geom.rect_to_rust_hitbox(
+                    o.get_rect().expand(cheat_settings["extend_deadly_hitbox"])
                 ),
-                cheats_rust.ObjectType.Spike,
+                deadly_objects_type[o.nametype],
             )
-            for o in self.game.objects
-            if o.nametype == "Spike"
+            for o in self.game.objects + self.game.static_objs
+            if o.nametype in deadly_objects_type
         ]
+
         static_objects += [
             (
                 cheats_rust.Hitbox(
@@ -590,7 +594,7 @@ class Hackceler8(arcade.Window):
             objects=static_objects,
             environments=enviroments,
         )
-        return (settings, initial_state, static_state)
+        return settings, initial_state, static_state
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if self.game is None:
@@ -610,6 +614,11 @@ class Hackceler8(arcade.Window):
             target_y,
         )
         if button == arcade.MOUSE_BUTTON_LEFT and modifiers & arcade.key.MOD_CTRL:
+            print(
+                "Static objects:", {o.nametype for o in self.game.tiled_map.static_objs}
+            )
+            print("Game objects:", {o.nametype for o in self.game.objects})
+            print("Weapons:", {o.nametype for o in self.game.combat_system.weapons})
 
             settings, initial_state, static_state = self.to_rust_state()
 
@@ -670,4 +679,4 @@ class Hackceler8(arcade.Window):
 
                     self.force_next_keys.append((moves, state))
 
-                print("path found", path)
+                print("path found", [x[:2] for x in path])

@@ -1,11 +1,11 @@
 use core::hash::Hash;
+use std::collections::HashMap;
+use std::hash;
 use std::hash::Hasher;
 
 use pyo3::types::PyModule;
 use pyo3::{pyclass, pyfunction, pymethods, Python};
 use static_init::dynamic;
-use std::collections::HashMap;
-use std::hash;
 
 use crate::{
     env_modifier::EnvModifier,
@@ -90,6 +90,16 @@ impl PlayerState {
             in_the_air,
             dead: false,
         }
+    }
+}
+
+impl PlayerState {
+    pub fn half_height(&self) -> f64 {
+        ((self.hy_max - self.hy_min) / 2.0).floor()
+    }
+
+    pub fn half_width(&self) -> f64 {
+        ((self.hx_max - self.hx_min) / 2.0).floor()
     }
 }
 
@@ -356,31 +366,26 @@ impl PhysState {
         self.player.vx = 0.0;
         self.player.in_the_air = true;
 
-        let half_w = ((self.player.hx_max - self.player.hx_min) / 2.0).floor() + 1.0;
-        if mpv > 0.0 {
-            let dx = o1.polygon.leftmost_point - half_w - self.player.x;
-            self.player.move_by(dx, 0.0);
-            //self.player.x = o1.polygon.leftmost_point - half_w;
+        let dx = if mpv > 0.0 {
+            o1.polygon.leftmost_point - self.player.half_width() - 1.0 - self.player.x
         } else {
-            let dx = o1.polygon.rightmost_point + half_w - self.player.x;
-            self.player.move_by(dx, 0.0);
-            //self.player.x = o1.polygon.rightmost_point + half_w;
-        }
+            o1.polygon.rightmost_point + self.player.half_width() + 1.0 - self.player.x
+        };
+
+        self.player.move_by(dx, 0.0);
     }
 
     fn align_y_edge(&mut self, o1: &Hitbox, mpv: f64) {
         self.player.vy = 0.0;
-        let half_h = ((self.player.hy_max - self.player.hy_min) / 2.0).floor();
-        if mpv < 0.0 {
-            //self.player.y = o1.polygon.highest_point + half_h;
-            let dy = o1.polygon.highest_point + half_h - self.player.y;
-            self.player.move_by(0.0, dy);
+
+        let dy = if mpv < 0.0 {
             self.player.in_the_air = false;
+            o1.polygon.highest_point + self.player.half_height() - self.player.y
         } else {
-            let dy = o1.polygon.lowest_point - half_h - self.player.y;
-            self.player.move_by(0.0, dy);
-            //self.player.y = o1.polygon.lowest_point - half_h;
-        }
+            o1.polygon.lowest_point - self.player.half_height() - self.player.y
+        };
+
+        self.player.move_by(0.0, dy);
     }
 
     pub fn get_player_hitbox(&self) -> Hitbox {
@@ -461,17 +466,27 @@ impl PartialEq for PhysState {
         if self.player.y != other.player.y {
             return false;
         }
-        if self.player.hx_min != other.player.hx_min {
-            return false;
-        }
-        if self.player.hx_max != other.player.hx_max {
-            return false;
-        }
-        if self.player.hy_min != other.player.hy_min {
-            return false;
-        }
-        if self.player.hy_max != other.player.hy_max {
-            return false;
+
+        if self.settings.simple_geometry {
+            if self.player.half_height().to_le_bytes() != other.player.half_height().to_le_bytes() {
+                return false;
+            }
+            if self.player.half_width().to_le_bytes() != other.player.half_width().to_le_bytes() {
+                return false;
+            }
+        } else {
+            if self.player.hx_min != other.player.hx_min {
+                return false;
+            }
+            if self.player.hx_max != other.player.hx_max {
+                return false;
+            }
+            if self.player.hy_min != other.player.hy_min {
+                return false;
+            }
+            if self.player.hy_max != other.player.hy_max {
+                return false;
+            }
         }
 
         if self.settings.enable_vpush {
@@ -502,29 +517,26 @@ impl Hash for PhysState {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.player.x.to_le_bytes());
         state.write(&self.player.y.to_le_bytes());
-        state.write(&self.player.hx_min.to_le_bytes());
-        state.write(&self.player.hx_max.to_le_bytes());
-        state.write(&self.player.hy_min.to_le_bytes());
-        state.write(&self.player.hy_max.to_le_bytes());
+
+        if self.settings.simple_geometry {
+            self.player.half_height().to_le_bytes().hash(state);
+            self.player.half_width().to_le_bytes().hash(state);
+        } else {
+            state.write(&self.player.hx_min.to_le_bytes());
+            state.write(&self.player.hx_max.to_le_bytes());
+            state.write(&self.player.hy_min.to_le_bytes());
+            state.write(&self.player.hy_max.to_le_bytes());
+        }
 
         if self.settings.enable_vpush {
             state.write(&self.player.vpush.to_le_bytes());
-            state.write(&(self.player.can_control_movement as u8).to_le_bytes());
-            state.write(&(self.player.direction as u8).to_le_bytes());
+            self.player.can_control_movement.hash(state);
+            (self.player.direction as u8).hash(state);
         }
 
         if self.settings.mode == GameMode::Platformer {
             state.write(&self.player.vy.to_le_bytes());
         }
-    }
-}
-
-fn precision_f64(x: f64, decimals: i32) -> f64 {
-    if x == 0. || decimals == 0 {
-        0.
-    } else {
-        let shift_factor = 10_f64.powi(decimals);
-        (x * shift_factor).round() / shift_factor
     }
 }
 

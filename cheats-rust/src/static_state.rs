@@ -27,7 +27,7 @@ impl StaticState {
                 ObjectType::SpeedTile => {
                     speed_tiles.push(SpeedTile::new(hitbox));
                 }
-                ObjectType::Spike => {
+                ObjectType::Spike | ObjectType::Arena | ObjectType::Portal => {
                     deadly.push(hitbox);
                 }
                 _ => {

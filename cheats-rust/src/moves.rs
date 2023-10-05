@@ -18,9 +18,6 @@ pub enum Move {
 
 impl Move {
     pub fn all(settings: &SearchSettings) -> Vec<Move> {
-        // static DIRECTIONS: [Move; 2] = [Move::S, Move::SA];
-        // DIRECTIONS.iter()
-
         if !settings.allowed_moves.is_empty() {
             return settings.allowed_moves.clone();
         }

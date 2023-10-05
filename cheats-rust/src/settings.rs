@@ -14,6 +14,7 @@ pub enum GameMode {
 pub struct PhysicsSettings {
     pub mode: GameMode,
     pub enable_vpush: bool,
+    pub simple_geometry: bool,
 }
 
 #[pyclass]
@@ -24,7 +25,9 @@ pub struct SearchSettings {
     pub always_shift: bool,
     pub disable_shift: bool,
     pub allowed_moves: Vec<Move>,
+    pub heuristic_weight: f64,
     pub enable_vpush: bool,
+    pub simple_geometry: bool,
 }
 
 #[pymethods]
@@ -36,7 +39,9 @@ impl SearchSettings {
         always_shift: bool,
         disable_shift: bool,
         allowed_moves: Vec<Move>,
+        heuristic_weight: f64,
         enable_vpush: bool,
+        simple_geometry: bool,
     ) -> Self {
         Self {
             mode,
@@ -44,7 +49,9 @@ impl SearchSettings {
             always_shift,
             disable_shift,
             allowed_moves,
+            heuristic_weight,
             enable_vpush,
+            simple_geometry,
         }
     }
 
@@ -52,6 +59,7 @@ impl SearchSettings {
         PhysicsSettings {
             mode: self.mode,
             enable_vpush: self.enable_vpush,
+            simple_geometry: self.simple_geometry,
         }
     }
 }
