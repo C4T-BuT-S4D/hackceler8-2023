@@ -14,6 +14,7 @@
 
 import logging
 import os
+import time
 import uuid
 
 import arcade
@@ -60,6 +61,8 @@ class Hackceler8(arcade.Window):
 
         self.force_next_keys = []
         self.force_next_keys_per_frame = 1
+
+        self.draws = []
 
         self.camera = None
         self.gui_camera = None  # For stationary objects.
@@ -165,7 +168,15 @@ class Hackceler8(arcade.Window):
         player_centered = screen_center_x, screen_center_y
         self.camera.move_to(player_centered)
 
+    def record_draw(self):
+        now = time.time()
+        self.draws.append(now)
+        while self.draws and now - self.draws[0] > 3:
+            self.draws.pop(0)
+
     def on_draw(self):
+        self.record_draw()
+
         self.gui_camera.use()
 
         if self.game is None:
@@ -190,6 +201,16 @@ class Hackceler8(arcade.Window):
             18,
             font_name=constants.FONT_NAME,
         )
+
+        if len(self.draws) > 1:
+            arcade.draw_text(
+                "FPS: %.02f" % (len(self.draws) / (self.draws[-1] - self.draws[0])),
+                300,
+                10,
+                arcade.csscolor.WHITE,
+                18,
+                font_name=constants.FONT_NAME,
+                )
 
         if self.game.player.dead:
             arcade.draw_text(
@@ -289,65 +310,69 @@ class Hackceler8(arcade.Window):
             self.game.danmaku_system.draw()
 
         cheats_settings = get_settings()
-        for o in (
-            self.game.tiled_map.objs
-            + self.game.tiled_map.static_objs
-            + self.game.tiled_map.moving_platforms
-            + self.game.tiled_map.dynamic_artifacts
-        ):
-            color = None
-            match o.nametype:
-                case "Wall":
-                    color = arcade.color.RED
-                case "MovingPlatform":
-                    color = arcade.color.RED_BROWN
-                case "Door":
-                    color = arcade.color.BROWN
-                case "NPC":
-                    color = arcade.color.YELLOW
-                case "ExitArea":
-                    color = arcade.color.GREEN
-                case "Player":
-                    color = arcade.color.BURNT_ORANGE
-                case "Item":
-                    color = arcade.color.WHITE
-                case "Arena":
-                    color = arcade.color.BLACK
-                case "BossGate":
-                    color = arcade.color.PURPLE
-                case "Portal":
-                    color = arcade.color.BLUE
-                case "Toggle":
-                    color = arcade.color.ORANGE
-                case "Buffer":
-                    color = arcade.color.PINK
-                case "Enemy":
-                    color = arcade.color.RED_DEVIL
-                case "Spike":
-                    color = arcade.color.RED_DEVIL
-                case "SpeedTile":
-                    color = arcade.color.BLUE_GREEN
-                case "Switch":
-                    color = arcade.color.CADMIUM_GREEN
-                case "Boss":
-                    color = arcade.color.CYAN
-                case _:
-                    print(f"skipped object {o.nametype}")
+        if cheats_settings['draw_boxes']:
+            for o in (
+                self.game.tiled_map.objs
+                + self.game.tiled_map.static_objs
+                + self.game.tiled_map.moving_platforms
+                + self.game.tiled_map.dynamic_artifacts
+                + self.game.combat_system.original_weapons
+            ):
+                color = None
+                match o.nametype:
+                    case "Wall":
+                        color = arcade.color.RED
+                    case "MovingPlatform":
+                        color = arcade.color.RED_BROWN
+                    case "Door":
+                        color = arcade.color.BROWN
+                    case "NPC":
+                        color = arcade.color.YELLOW
+                    case "ExitArea":
+                        color = arcade.color.GREEN
+                    case "Player":
+                        color = arcade.color.BURNT_ORANGE
+                    case "Item":
+                        color = arcade.color.WHITE
+                    case "Arena":
+                        color = arcade.color.BLACK
+                    case "BossGate":
+                        color = arcade.color.PURPLE
+                    case "Portal":
+                        color = arcade.color.BLUE
+                    case "Toggle":
+                        color = arcade.color.ORANGE
+                    case "Buffer":
+                        color = arcade.color.PINK
+                    case "Enemy":
+                        color = arcade.color.RED_DEVIL
+                    case "Spike":
+                        color = arcade.color.RED_DEVIL
+                    case "SpeedTile":
+                        color = arcade.color.BLUE_GREEN
+                    case "Switch":
+                        color = arcade.color.CADMIUM_GREEN
+                    case "Boss":
+                        color = arcade.color.CYAN
+                    case "Weapon":
+                        color = arcade.color.CORAL
+                    case _:
+                        print(f"skipped object {o.nametype}")
 
-            if color:
-                rect = o.get_rect()
-                arcade.draw_lrtb_rectangle_outline(
-                    rect.x1(),
-                    rect.x2(),
-                    rect.y2(),
-                    rect.y1(),
-                    color,
-                    border_width=cheats_settings["object_hitbox"],
-                )
-                if cheats_settings["draw_names"]:
-                    arcade.draw_text(
-                        f"{o.nametype} | {o.name}", rect.x1(), rect.y2() + 6, color
+                if color:
+                    rect = o.get_rect()
+                    arcade.draw_lrtb_rectangle_outline(
+                        rect.x1(),
+                        rect.x2(),
+                        rect.y2(),
+                        rect.y1(),
+                        color,
+                        border_width=cheats_settings["object_hitbox"],
                     )
+                    if cheats_settings["draw_names"] and o.nametype not in {"Wall"}:
+                        arcade.draw_text(
+                            f"{o.nametype} | {o.name}", rect.x1(), rect.y2() + 6, color
+                        )
 
     def render_map(self):
         tiled_map_size = self.game.tiled_map.parsed_map.map_size
