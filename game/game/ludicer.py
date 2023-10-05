@@ -567,7 +567,11 @@ class Ludicer:
         Enemy.check_control_inversion(self)
         Switch.check_all_pressed(self)
 
-        if not self.is_server and self.player is not None and self.player.inverted_controls:
+        if (
+            not self.is_server
+            and self.player is not None
+            and self.player.inverted_controls
+        ):
             pressed_keys = set()
             for key in self.pressed_keys:
                 match key:
@@ -583,7 +587,9 @@ class Ludicer:
                         pressed_keys.add(key)
 
             self.pressed_keys = pressed_keys
-            self.newly_pressed_keys = self.pressed_keys.difference(self.prev_pressed_keys_save)
+            self.newly_pressed_keys = self.pressed_keys.difference(
+                self.prev_pressed_keys_save
+            )
             self.prev_pressed_keys = self.pressed_keys.copy()
 
         if self.player is not None:
