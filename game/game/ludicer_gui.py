@@ -64,6 +64,7 @@ class Hackceler8(arcade.Window):
         self.force_movement_keys_per_frame = 1
 
         self.num_weapon_shifts = -1
+        self.auto_weapon_shooting = False
 
         self.camera = None
         self.gui_camera = None  # For stationary objects.
@@ -375,6 +376,7 @@ class Hackceler8(arcade.Window):
 
     def tick_game_with_shooting(self):
         added_keys = set()
+        weapon_firing_enabled = self.num_weapon_shifts >= 0
 
         # on correct weapon, shoot it if we can
         if (
@@ -415,6 +417,21 @@ class Hackceler8(arcade.Window):
 
         for key in added_keys:
             self.game.raw_pressed_keys.remove(key)
+
+        # check auto weapon shooting after ticking because something might've broken already,
+        # e.g. user might've thrown all the weapons out
+        if self.auto_weapon_shooting and not (
+            self.game is not None
+            and self.game.player is not None
+            and len(self.game.player.weapons) > 0
+        ):
+            self.auto_weapon_shooting = False
+
+        # try to find the next weapon to shoot if shooting is enabled
+        if weapon_firing_enabled and self.auto_weapon_shooting:
+            min_index = self.closest_shootable_weapon()
+            if min_index >= 0:
+                self.num_weapon_shifts = min_index
 
     def tick_game_with_movement_and_shooting(self):
         settings, state, static_state = self.to_rust_state()
@@ -558,8 +575,20 @@ class Hackceler8(arcade.Window):
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
 
+        # enable automatic shooting which will always select the next
+        # weapon to shoot once we've shot the current one
+        if symbol == arcade.key.BRACKETRIGHT or symbol == arcade.key.BRACERIGHT:
+            self.auto_weapon_shooting = not self.auto_weapon_shooting
+
+        # disable automatic shooting when using semi-automatic one
+        semiauto_weapon_shooting = (
+            symbol == arcade.key.BRACKETLEFT or symbol == arcade.key.BRACELEFT
+        )
+        if semiauto_weapon_shooting:
+            self.auto_weapon_shooting = False
+
         if (
-            (symbol == arcade.key.BRACKETLEFT or symbol == arcade.key.BRACELEFT)
+            (semiauto_weapon_shooting or self.auto_weapon_shooting)
             and self.game is not None
             and self.game.player is not None
             and len(self.game.player.weapons) > 0
