@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from logging.handlers import WatchedFileHandler
-
 import argparse
 import datetime
 import logging
 import os
 import sys
+from enum import Enum
+from logging.handlers import WatchedFileHandler
 
 
 def get_argument_parser():

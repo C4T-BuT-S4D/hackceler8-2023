@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import constants
-from engine import generics
 import engine.hitbox as hitbox
+from engine import generics
 
 
 class Projectile(generics.GenericObject):

@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .enemy import StaticJellyfish, MovingJellyfish, EvilCamera, Martian
+from .enemy import EvilCamera
+from .enemy import Martian
+from .enemy import MovingJellyfish
+from .enemy import StaticJellyfish
 
 ENEMY_TYPES = {
     "static_jellyfish_enemy": StaticJellyfish,

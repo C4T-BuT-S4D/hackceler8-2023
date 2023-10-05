@@ -9,7 +9,7 @@ use pyo3::{pyclass, pyfunction, pymethods};
 use crate::{
     moves::Move,
     physics::{PhysState, PlayerState},
-    settings::Settings,
+    settings::SearchSettings,
     StaticState,
 };
 
@@ -64,7 +64,7 @@ fn heuristic(target_state: &PlayerState, current_state: &PlayerState) -> f64 {
 
 #[pyfunction]
 pub fn astar_search(
-    settings: Settings,
+    settings: SearchSettings,
     mut initial_state: PhysState,
     target_state: PhysState,
     static_state: StaticState,
@@ -85,9 +85,13 @@ pub fn astar_search(
 
     let shift_variants = if settings.always_shift {
         vec![true]
+    } else if settings.disable_shift {
+        vec![false]
     } else {
         vec![false, true]
     };
+
+    let allowed_moves = Move::all(&settings);
 
     let start = SystemTime::now();
     let mut iter = 0;
@@ -118,7 +122,7 @@ pub fn astar_search(
         //     next_move = Move::SA;
         // }
 
-        for &next_move in Move::iterator(&settings) {
+        for &next_move in &allowed_moves {
             for &shift_pressed in shift_variants.iter() {
                 if !settings.always_shift && shift_pressed && next_move.is_only_vertical() {
                     continue;

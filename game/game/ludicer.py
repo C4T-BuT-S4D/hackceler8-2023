@@ -12,34 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import copy
-from enum import Enum
-from threading import Thread, Lock
 import json
 import logging
 import os
 import time
+from copy import copy
+from enum import Enum
+from threading import Lock
+from threading import Thread
 
-import numpy as np
 import arcade
+import numpy as np
 import xxhash
 
 import constants
 from components import textbox
+from components.enemy.enemy import Enemy
 from components.inventory import Inventory
 from components.llm.llm import Llm
-from components.enemy.enemy import Enemy
 from components.switch import Switch
-from engine import physics, logic
-from engine.danmaku import DanmakuSystem
+from constants import PLAYER_MOVEMENT
+from engine import logic
+from engine import physics
 from engine.combat import CombatSystem
+from engine.danmaku import DanmakuSystem
 from engine.grenade import GrenadeSystem
 from engine.map_switcher import MapSwitch
 from engine.rng import RngSystem
-from engine.state import check_item_loaded, load_from_savefile
+from engine.state import check_item_loaded
+from engine.state import load_from_savefile
 from map_loading import maps
 from map_loading.maps import GameMode
-from constants import PLAYER_MOVEMENT
 
 
 class MagicItem(Enum):
@@ -152,6 +155,7 @@ class Ludicer:
 
         self.newly_pressed_keys = set()
         self.prev_pressed_keys = set()
+        self.prev_pressed_keys_save = set()
         self.tracked_keys = {
             # Movement
             arcade.key.W,
@@ -432,7 +436,7 @@ class Ludicer:
         msg = {
             "tics": self.tics,
             "state": self.state_hash,
-            "keys": list(self.raw_pressed_keys),
+            "keys": list(self.pressed_keys),
             "text_input": self.get_text_input(),
             "llm_ack": llm_ack,
         }
@@ -478,6 +482,8 @@ class Ludicer:
         self.dump_state()
         self.pressed_keys = self.tracked_keys & self.raw_pressed_keys
         self.newly_pressed_keys = self.pressed_keys.difference(self.prev_pressed_keys)
+
+        self.prev_pressed_keys_save = self.prev_pressed_keys.copy()
         self.prev_pressed_keys = self.pressed_keys.copy()
 
         self.prev_display_inventory = self.display_inventory
@@ -562,26 +568,34 @@ class Ludicer:
         Enemy.check_control_inversion(self)
         Switch.check_all_pressed(self)
 
-        if self.player is not None:
-            if self.player.inverted_controls:
-                pressed_keys = []
-                for key in self.pressed_keys:
-                    match key:
-                        case arcade.key.W:
-                            pressed_keys.append(arcade.key.S)
-                        case arcade.key.S:
-                            pressed_keys.append(arcade.key.W)
-                        case arcade.key.A:
-                            pressed_keys.append(arcade.key.D)
-                        case arcade.key.D:
-                            pressed_keys.append(arcade.key.A)
-                        case _:
-                            pressed_keys.append(key)
-            else:
-                pressed_keys = self.pressed_keys
+        if (
+            not self.is_server
+            and self.player is not None
+            and self.player.inverted_controls
+        ):
+            pressed_keys = set()
+            for key in self.pressed_keys:
+                match key:
+                    case arcade.key.W:
+                        pressed_keys.add(arcade.key.S)
+                    case arcade.key.S:
+                        pressed_keys.add(arcade.key.W)
+                    case arcade.key.A:
+                        pressed_keys.add(arcade.key.D)
+                    case arcade.key.D:
+                        pressed_keys.add(arcade.key.A)
+                    case _:
+                        pressed_keys.add(key)
 
+            self.pressed_keys = pressed_keys
+            self.newly_pressed_keys = self.pressed_keys.difference(
+                self.prev_pressed_keys_save
+            )
+            self.prev_pressed_keys = self.pressed_keys.copy()
+
+        if self.player is not None:
             self.player.tick(
-                pressed_keys,
+                self.pressed_keys,
                 self.newly_pressed_keys,
                 reset_speed=(self.current_mode == GameMode.MODE_SCROLLER),
             )

@@ -1,6 +1,6 @@
 use pyo3::pyclass;
 
-use crate::settings::{GameMode, Settings};
+use crate::settings::{GameMode, SearchSettings};
 
 #[pyclass]
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Hash)]
@@ -17,9 +17,13 @@ pub enum Move {
 }
 
 impl Move {
-    pub fn iterator(settings: &Settings) -> std::slice::Iter<'static, Move> {
+    pub fn all(settings: &SearchSettings) -> Vec<Move> {
         // static DIRECTIONS: [Move; 2] = [Move::S, Move::SA];
         // DIRECTIONS.iter()
+
+        if !settings.allowed_moves.is_empty() {
+            return settings.allowed_moves.clone();
+        }
 
         static DIRECTIONS_SCROLLER: [Move; 9] = [
             Move::NONE,
@@ -32,11 +36,13 @@ impl Move {
             Move::SA,
             Move::SD,
         ];
+
         static DIRECTIONS_PLATFORMER: [Move; 6] =
             [Move::NONE, Move::A, Move::D, Move::W, Move::WA, Move::WD];
+
         match settings.mode {
-            GameMode::Scroller => DIRECTIONS_SCROLLER.iter(),
-            GameMode::Platformer => DIRECTIONS_PLATFORMER.iter(),
+            GameMode::Scroller => DIRECTIONS_SCROLLER.into(),
+            GameMode::Platformer => DIRECTIONS_PLATFORMER.into(),
         }
     }
 

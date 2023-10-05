@@ -15,9 +15,9 @@
 import argparse
 import logging
 
+import log
 import ludicer_gui
 import network
-import log
 from cheats.server import run_cheats_server
 
 

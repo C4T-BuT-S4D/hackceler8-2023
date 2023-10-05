@@ -12,7 +12,7 @@ use crate::{
     geometry::Pointf,
     hitbox::Hitbox,
     moves::{Direction, Move},
-    settings::{GameMode, Settings},
+    settings::{GameMode, PhysicsSettings},
     static_state::StaticState,
 };
 
@@ -167,7 +167,7 @@ impl PlayerState {
     fn update_movement(
         &mut self,
         mov: Move,
-        settings: &Settings,
+        settings: &PhysicsSettings,
         shift_pressed: bool,
         active_modifier: Option<&EnvModifier>,
     ) {
@@ -213,7 +213,7 @@ impl PlayerState {
 
     fn change_direction(
         &mut self,
-        settings: &Settings,
+        settings: &PhysicsSettings,
         direction: Direction,
         sprinting: bool,
         active_modifier: Option<&EnvModifier>,
@@ -270,14 +270,14 @@ impl PlayerState {
 #[derive(Clone, Debug)]
 pub struct PhysState {
     pub player: PlayerState,
-    settings: Settings,
+    settings: PhysicsSettings,
     active_modifier: Option<usize>,
 }
 
 #[pymethods]
 impl PhysState {
     #[new]
-    pub fn new(player: PlayerState, settings: Settings) -> Self {
+    pub fn new(player: PlayerState, settings: PhysicsSettings) -> Self {
         PhysState {
             player,
             settings,
@@ -519,13 +519,11 @@ impl Hash for PhysState {
     }
 }
 
-fn precision_f64(x: f64, decimals: u32) -> f64 {
+fn precision_f64(x: f64, decimals: i32) -> f64 {
     if x == 0. || decimals == 0 {
         0.
     } else {
-        let shift = decimals as i32 - x.abs().log10().ceil() as i32;
-        let shift_factor = 10_f64.powi(shift);
-
+        let shift_factor = 10_f64.powi(decimals);
         (x * shift_factor).round() / shift_factor
     }
 }

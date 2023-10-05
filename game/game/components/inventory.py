@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import arcade
-import constants
 from arcade import gui
+
+import constants
 
 
 class QuitButton(arcade.gui.UIFlatButton):
