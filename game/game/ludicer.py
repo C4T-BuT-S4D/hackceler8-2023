@@ -474,7 +474,6 @@ class Ludicer:
             return self.send_game_info()
 
         self.tics += 1
-        self.player.health = 100
         if self.player.health <= 0:
             self.player.dead = True
         if not self.is_server and self.net is not None:

@@ -373,7 +373,7 @@ class Hackceler8(arcade.Window):
             )
 
     def tick_game(self):
-        print('h', self.game.player.get_height(), 'w', self.game.player.get_width(), 'x', self.game.player.x, 'y', self.game.player.y)
+        #print('h', self.game.player.get_height(), 'w', self.game.player.get_width(), 'x', self.game.player.x, 'y', self.game.player.y)
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys) # copy
         if arcade.key.LSHIFT in keys:
