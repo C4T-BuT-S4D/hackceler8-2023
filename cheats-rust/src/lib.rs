@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 use pyo3::prelude::*;
 
 use env_modifier::EnvModifier;

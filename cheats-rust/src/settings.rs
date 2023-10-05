@@ -28,11 +28,13 @@ pub struct SearchSettings {
     pub heuristic_weight: f64,
     pub enable_vpush: bool,
     pub simple_geometry: bool,
+    pub state_batch_size: usize,
 }
 
 #[pymethods]
 impl SearchSettings {
     #[new]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         mode: GameMode,
         timeout: u64,
@@ -42,6 +44,7 @@ impl SearchSettings {
         heuristic_weight: f64,
         enable_vpush: bool,
         simple_geometry: bool,
+        state_batch_size: usize,
     ) -> Self {
         Self {
             mode,
@@ -52,6 +55,7 @@ impl SearchSettings {
             heuristic_weight,
             enable_vpush,
             simple_geometry,
+            state_batch_size,
         }
     }
 

@@ -46,6 +46,12 @@ class Settings(FlaskForm):
         description="Only use integer height/width in state",
     )
 
+    state_batch_size = IntegerField(
+        default=50000,
+        label="State batch size",
+        description="Number of states to process in one batch in parallel",
+    )
+
     object_hitbox = IntegerField(
         default=3,
         label="Object hitbox width",
@@ -56,6 +62,24 @@ class Settings(FlaskForm):
         default=1,
         label="Extend deadly hitbox",
         description="Extend deadly hitbox by this amount of pixels",
+    )
+
+    validate_transitions = BooleanField(
+        default=False,
+        label="Validate transitions",
+        description="Validate transitions with rust",
+    )
+
+    draw_names = BooleanField(
+        default=True, label="Draw names", description="Draw objects names"
+    )
+
+    draw_boxes = BooleanField(
+        default=True, label="Draw boxes", description="Draw objects boxes"
+    )
+
+    draw_lines = BooleanField(
+        default=True, label="Draw lines", description="Draw lines to important objects"
     )
 
     submit_button = SubmitField("Submit Form")

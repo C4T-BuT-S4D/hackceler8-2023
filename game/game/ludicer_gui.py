@@ -66,6 +66,8 @@ class Hackceler8(arcade.Window):
         self.num_weapon_shifts = -1
         self.auto_weapon_shooting = False
 
+        self.draws = []
+
         self.camera = None
         self.gui_camera = None  # For stationary objects.
 
@@ -167,7 +169,15 @@ class Hackceler8(arcade.Window):
         player_centered = screen_center_x, screen_center_y
         self.camera.move_to(player_centered)
 
+    def record_draw(self):
+        now = time.time()
+        self.draws.append(now)
+        while self.draws and now - self.draws[0] > 3:
+            self.draws.pop(0)
+
     def on_draw(self):
+        self.record_draw()
+
         self.gui_camera.use()
 
         if self.game is None:
@@ -192,6 +202,16 @@ class Hackceler8(arcade.Window):
             18,
             font_name=constants.FONT_NAME,
         )
+
+        if len(self.draws) > 1:
+            arcade.draw_text(
+                "FPS: %.02f" % (len(self.draws) / (self.draws[-1] - self.draws[0])),
+                300,
+                10,
+                arcade.csscolor.WHITE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
 
         if self.game.player.dead:
             arcade.draw_text(
@@ -296,6 +316,7 @@ class Hackceler8(arcade.Window):
             + self.game.tiled_map.static_objs
             + self.game.tiled_map.moving_platforms
             + self.game.tiled_map.dynamic_artifacts
+            + self.game.combat_system.original_weapons
         ):
             color = None
             match o.nametype:
@@ -333,19 +354,47 @@ class Hackceler8(arcade.Window):
                     color = arcade.color.CADMIUM_GREEN
                 case "Boss":
                     color = arcade.color.CYAN
+                case "Weapon":
+                    color = arcade.color.CORAL
                 case _:
                     print(f"skipped object {o.nametype}")
 
             if color:
                 rect = o.get_rect()
-                arcade.draw_lrtb_rectangle_outline(
-                    rect.x1(),
-                    rect.x2(),
-                    rect.y2(),
-                    rect.y1(),
-                    color,
-                    border_width=cheats_settings["object_hitbox"],
-                )
+
+                if cheats_settings["draw_boxes"]:
+                    arcade.draw_lrtb_rectangle_outline(
+                        rect.x1(),
+                        rect.x2(),
+                        rect.y2(),
+                        rect.y1(),
+                        color,
+                        border_width=cheats_settings["object_hitbox"],
+                    )
+
+                if cheats_settings["draw_names"] and o.nametype not in {"Wall"}:
+                    arcade.draw_text(
+                        f"{o.nametype} | {o.name}", rect.x1(), rect.y2() + 6, color
+                    )
+
+                if cheats_settings["draw_lines"]:
+                    if getattr(o, "color", None) is not None:
+                        line_color = getattr(arcade.color, o.color.upper(), None)
+                        if line_color is None:
+                            logging.error(
+                                f"failed to get line color for item of color {o.color}, will use the default color"
+                            )
+                            line_color = color
+
+                        arcade.draw_line(
+                            start_x=self.game.player.x,
+                            start_y=self.game.player.y,
+                            end_x=abs(rect.x1() + rect.x2()) / 2,
+                            end_y=abs(rect.y1() + rect.y2()) / 2,
+                            color=line_color,
+                            line_width=2,
+                        )
+                    # render lines to something else as well
 
     def render_map(self):
         tiled_map_size = self.game.tiled_map.parsed_map.map_size
@@ -461,20 +510,25 @@ class Hackceler8(arcade.Window):
         elif keys == set():
             move = cheats_rust.Move.NONE
         else:
-            print("unknown moves")
             self.tick_game_with_shooting()
             return
-        expected = cheats_rust.get_transition(static_state, state, move, shift)
+
+        if get_settings()["validate_transitions"]:
+            expected = cheats_rust.get_transition(static_state, state, move, shift)
+
         self.tick_game_with_shooting()
-        attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
-        vals = [
-            (getattr(self.game.player, k1), getattr(expected, k2)) for k1, k2 in attrs
-        ]
-        if not all(x == y for x, y in vals):
-            print("incorrect transition:")
-            for (k1, k2), (v1, v2) in zip(attrs, vals):
-                print(k1, "predicted", v2, "got", v1)
-            print()
+
+        if get_settings()["validate_transitions"]:
+            attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
+            vals = [
+                (getattr(self.game.player, k1), getattr(expected, k2))
+                for k1, k2 in attrs
+            ]
+            if not all(x == y for x, y in vals):
+                print("incorrect transition:")
+                for (k1, k2), (v1, v2) in zip(attrs, vals):
+                    print(k1, "predicted", v2, "got", v1)
+                print()
 
     def on_update(self, _delta_time: float):
         if self.game is None:
@@ -658,6 +712,7 @@ class Hackceler8(arcade.Window):
             heuristic_weight=cheat_settings["heuristic_weight"],
             enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
             simple_geometry=cheat_settings["simple_geometry"],
+            state_batch_size=cheat_settings["state_batch_size"],
         )
 
         static_objects = [

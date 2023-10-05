@@ -3,5 +3,5 @@
 .DS_Store
 __pycache__
 env/
-/game/game/cheats/static/
+/game/game/cheats/static/*
 !/game/game/cheats/static/.keep
