@@ -34,6 +34,7 @@ pub struct SearchSettings {
 #[pymethods]
 impl SearchSettings {
     #[new]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         mode: GameMode,
         timeout: u64,

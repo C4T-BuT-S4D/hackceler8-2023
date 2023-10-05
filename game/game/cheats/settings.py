@@ -46,6 +46,12 @@ class Settings(FlaskForm):
         description="Only use integer height/width in state",
     )
 
+    state_batch_size = IntegerField(
+        default=50000,
+        label="State batch size",
+        description="Number of states to process in one batch in parallel",
+    )
+
     object_hitbox = IntegerField(
         default=3,
         label="Object hitbox width",

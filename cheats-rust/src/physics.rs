@@ -1,8 +1,8 @@
 use core::hash::Hash;
-use std::collections::HashMap;
 use std::hash;
 use std::hash::Hasher;
 
+use hashbrown::HashMap;
 use pyo3::types::PyModule;
 use pyo3::{pyclass, pyfunction, pymethods, Python};
 use static_init::dynamic;
@@ -54,7 +54,7 @@ impl PartialEq for HashableF64 {
 impl Eq for HashableF64 {}
 
 #[pyclass]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PlayerState {
     #[pyo3(get, set)]
     pub x: f64,
@@ -287,7 +287,7 @@ impl PlayerState {
 }
 
 #[pyclass]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PhysState {
     pub player: PlayerState,
     settings: PhysicsSettings,
@@ -416,8 +416,7 @@ impl PhysState {
 
 impl PhysState {
     fn get_active_modifier<'a>(&self, state: &'a StaticState) -> Option<&'a EnvModifier> {
-        self.active_modifier
-            .and_then(|i| Some(&state.environments[i]))
+        self.active_modifier.map(|i| &state.environments[i])
     }
 
     fn gravity(&self, active_lifetime: Option<&EnvModifier>) -> f64 {
@@ -511,10 +510,8 @@ impl PartialEq for PhysState {
             }
         }
 
-        if self.settings.mode == GameMode::Platformer {
-            if self.player.vy != other.player.vy {
-                return false;
-            }
+        if self.settings.mode == GameMode::Platformer && self.player.vy != other.player.vy {
+            return false;
         }
 
         true
