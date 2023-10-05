@@ -15,9 +15,11 @@
 import logging
 import os
 import uuid
+import time
 
 import arcade
 import cheats_rust
+import pyglet
 from arcade import gui
 from PIL import Image
 from pyglet.image import load as pyglet_load
@@ -492,10 +494,7 @@ class Hackceler8(arcade.Window):
 
         weapons = self.game.player.weapons
 
-        if not weapons[0].equipped:
-            logging.error(
-                "semi-auto shooting only works when the equipped weapon is the first one"
-            )
+        if not weapons[0].equipped and not self.select_first_weapon():
             return -1
 
         min_tics = self.game.player.weapons[0].cool_down_timer
@@ -513,6 +512,37 @@ class Hackceler8(arcade.Window):
                 min_index = index
 
         return min_index
+
+    def select_first_weapon(self) -> bool:
+        original_pressed_keys = self.game.raw_pressed_keys.copy()
+
+        weapons = self.game.player.weapons
+        equipped_index = -1
+        for i, weapon in enumerate(weapons):
+            if weapon.equipped:
+                equipped_index = i
+                break
+
+        if equipped_index == -1:
+            logging.error(
+                "couldn't find equipped weapon despite user having >0 weapons"
+            )
+            return False
+
+        self.game.raw_pressed_keys = {arcade.key.P}
+        self.game.tick()
+        time.sleep(pyglet.clock.get_sleep_time(True))
+
+        for i in range(equipped_index):
+            self.game.raw_pressed_keys = {arcade.key.W}
+            self.game.tick()
+            time.sleep(pyglet.clock.get_sleep_time(True))
+
+        self.game.raw_pressed_keys = {arcade.key.P}
+        self.game.tick()
+        time.sleep(pyglet.clock.get_sleep_time(True))
+
+        self.game.raw_pressed_keys = original_pressed_keys
 
     def on_key_press(self, symbol: int, modifiers: int):
         if self.game is None:
