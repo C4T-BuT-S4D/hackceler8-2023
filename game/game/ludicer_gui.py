@@ -328,6 +328,7 @@ class Hackceler8(arcade.Window):
         arcade.finish_render()
 
     def tick_game(self):
+        print('h', self.game.player.get_height(), 'w', self.game.player.get_width(), 'x', self.game.player.x, 'y', self.game.player.y)
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys) # copy
         if arcade.key.LSHIFT in keys:
@@ -335,7 +336,6 @@ class Hackceler8(arcade.Window):
             keys.remove(arcade.key.LSHIFT)
         else:
             shift = False
-        print('pressed keys', keys)
         keys &= {arcade.key.W, arcade.key.A, arcade.key.S, arcade.key.D}
         if keys == {arcade.key.W}:
             move = cheats_rust.Move.W
@@ -357,6 +357,7 @@ class Hackceler8(arcade.Window):
             move = cheats_rust.Move.NONE
         else:
             print('unknown moves')
+            self.game.tick()
             return 
         expected = cheats_rust.get_transition(static_state, state, move, shift)
         self.game.tick()
@@ -378,22 +379,13 @@ class Hackceler8(arcade.Window):
         if self.force_next_keys:
             for keys, state in self.force_next_keys[: self.force_next_keys_per_frame]:
                 self.game.raw_pressed_keys = keys
-                self.game.tick()
-                attrs = [('x','x'), ('y','y'), ('x_speed','vx'), ('y_speed','vy')]
-                vals = [(getattr(self.game.player, k1), getattr(state, k2)) for k1,k2 in attrs]
-                if not all(x == y for x,y in vals):
-                    print('incorrect transition:')
-                    for (k1,k2),(v1,v2) in zip(attrs,vals):
-                        print(k1, 'predicted', v2, 'got', v1)
-                print()
-
+                self.tick_game()
             self.force_next_keys = self.force_next_keys[
                 self.force_next_keys_per_frame :
             ]
             self.game.raw_pressed_keys = set()
         else:
             self.tick_game()
-            #self.game.tick()
 
         self.center_camera_to_player()
 
@@ -524,6 +516,10 @@ class Hackceler8(arcade.Window):
             player=cheats_rust.PlayerState(
                 x=player.x,
                 y=player.y,
+                hx_min=player.get_leftmost_point(),
+                hx_max=player.get_rightmost_point(),
+                hy_min=player.get_lowest_point(),
+                hy_max=player.get_highest_point(),
                 vx=player.x_speed,
                 vy=player.y_speed,
                 vpush=player.push_speed,
@@ -565,6 +561,10 @@ class Hackceler8(arcade.Window):
                 player=cheats_rust.PlayerState(
                     x=target_x,
                     y=target_y,
+                    hx_min=target_x - 16,
+                    hx_max=target_x - 16,
+                    hy_min=target_y + 16,
+                    hy_max=target_y + 16,
                     vx=0,
                     vy=0,
                     vpush=0,

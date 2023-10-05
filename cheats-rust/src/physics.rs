@@ -31,6 +31,16 @@ pub struct PlayerState {
     pub x: f64,
     #[pyo3(get, set)]
     pub y: f64,
+
+    #[pyo3(get, set)]
+    pub hx_min: f64,
+    #[pyo3(get, set)]
+    pub hx_max: f64,
+    #[pyo3(get, set)]
+    pub hy_min: f64,
+    #[pyo3(get, set)]
+    pub hy_max: f64,
+
     #[pyo3(get, set)]
     pub vx: f64,
     #[pyo3(get, set)]
@@ -54,6 +64,10 @@ impl PlayerState {
     pub fn new(
         x: f64,
         y: f64,
+        hx_min: f64,
+        hx_max: f64,
+        hy_min: f64,
+        hy_max: f64,
         vx: f64,
         vy: f64,
         vpush: f64,
@@ -64,6 +78,10 @@ impl PlayerState {
         PlayerState {
             x,
             y,
+            hx_min,
+            hx_max,
+            hy_min,
+            hy_max,
             vx,
             vy,
             vpush,
@@ -133,11 +151,17 @@ impl PlayerState {
         }
     }
 
+    fn move_by(&mut self, dx: f64, dy: f64) {
+        self.x += dx;
+        self.y += dy;
+        self.hx_min += dx;
+        self.hy_min += dy;
+        self.hx_max += dx;
+        self.hy_max += dy;
+    }
+
     fn update_position(&mut self) {
-        //self.x += precision_f64(TICK_S * self.vx, 5);
-        //self.y += precision_f64(TICK_S * self.vy, 5);
-        self.x += round_speed(self.vx);
-        self.y += round_speed(self.vy);
+        self.move_by(round_speed(self.vx), round_speed(self.vy));
     }
 
     fn update_movement(
@@ -261,7 +285,6 @@ impl PhysState {
         }
     }
 }
-
 impl PhysState {
     pub fn tick(&mut self, mov: Move, shift_pressed: bool, state: &StaticState) {
         for speed_tile in &state.speed_tiles {
@@ -333,32 +356,39 @@ impl PhysState {
         self.player.vx = 0.0;
         self.player.in_the_air = true;
 
+        let half_w = ((self.player.hx_max - self.player.hx_min) / 2.0).floor() + 1.0;
         if mpv > 0.0 {
-            self.player.x = o1.polygon.leftmost_point - 17.0;
+            let dx = o1.polygon.leftmost_point - half_w - self.player.x;
+            self.player.move_by(dx, 0.0);
+            //self.player.x = o1.polygon.leftmost_point - half_w;
         } else {
-            self.player.x = o1.polygon.rightmost_point + 17.0;
+            let dx = o1.polygon.rightmost_point + half_w - self.player.x;
+            self.player.move_by(dx, 0.0);
+            //self.player.x = o1.polygon.rightmost_point + half_w;
         }
     }
 
     fn align_y_edge(&mut self, o1: &Hitbox, mpv: f64) {
         self.player.vy = 0.0;
-
+        let half_h = ((self.player.hy_max - self.player.hy_min) / 2.0).floor();
         if mpv < 0.0 {
-            self.player.y = o1.polygon.highest_point + 16.0;
+            //self.player.y = o1.polygon.highest_point + half_h;
+            let dy = o1.polygon.highest_point + half_h - self.player.y;
+            self.player.move_by(0.0, dy);
             self.player.in_the_air = false;
         } else {
-            self.player.y = o1.polygon.lowest_point - 16.0;
+            let dy = o1.polygon.lowest_point - half_h - self.player.y;
+            self.player.move_by(0.0, dy);
+            //self.player.y = o1.polygon.lowest_point - half_h;
         }
     }
 
     pub fn get_player_hitbox(&self) -> Hitbox {
-        let px = self.player.x;
-        let py = self.player.y;
         let outline = vec![
-            Pointf::new(px - 16.0, py - 16.0),
-            Pointf::new(px + 16.0, py - 16.0),
-            Pointf::new(px + 16.0, py + 16.0),
-            Pointf::new(px - 16.0, py + 16.0),
+            Pointf::new(self.player.hx_min, self.player.hy_min),
+            Pointf::new(self.player.hx_max, self.player.hy_min),
+            Pointf::new(self.player.hx_max, self.player.hy_max),
+            Pointf::new(self.player.hx_min, self.player.hy_max),
         ];
         Hitbox::new(outline)
     }
@@ -431,6 +461,18 @@ impl PartialEq for PhysState {
         if self.player.y != other.player.y {
             return false;
         }
+        if self.player.hx_min != other.player.hx_min {
+            return false;
+        }
+        if self.player.hx_max != other.player.hx_max {
+            return false;
+        }
+        if self.player.hy_min != other.player.hy_min {
+            return false;
+        }
+        if self.player.hy_max != other.player.hy_max {
+            return false;
+        }
 
         if self.settings.enable_vpush {
             if self.player.vpush != other.player.vpush {
@@ -460,6 +502,10 @@ impl Hash for PhysState {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.player.x.to_le_bytes());
         state.write(&self.player.y.to_le_bytes());
+        state.write(&self.player.hx_min.to_le_bytes());
+        state.write(&self.player.hx_max.to_le_bytes());
+        state.write(&self.player.hy_min.to_le_bytes());
+        state.write(&self.player.hy_max.to_le_bytes());
 
         if self.settings.enable_vpush {
             state.write(&self.player.vpush.to_le_bytes());
