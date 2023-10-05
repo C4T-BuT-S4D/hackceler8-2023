@@ -509,6 +509,7 @@ class Hackceler8(arcade.Window):
             heuristic_weight=cheat_settings["heuristic_weight"],
             enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
             simple_geometry=cheat_settings["simple_geometry"],
+            state_batch_size=50000,
         )
 
         static_objects = [

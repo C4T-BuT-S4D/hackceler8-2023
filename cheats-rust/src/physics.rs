@@ -24,6 +24,35 @@ pub const GRAVITY_CONSTANT: f64 = 6.0;
 pub const PUSH_DELTA: f64 = 125.0;
 pub const PUSH_SPEED: f64 = 2500.0;
 
+#[dynamic]
+static mut ROUND_CACHE: HashMap<HashableF64, HashableF64> = HashMap::new();
+
+#[derive(Debug, Copy, Clone)]
+struct HashableF64(f64);
+
+impl HashableF64 {
+    fn key(&self) -> u64 {
+        self.0.to_bits()
+    }
+}
+
+impl hash::Hash for HashableF64 {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: hash::Hasher,
+    {
+        self.key().hash(state)
+    }
+}
+
+impl PartialEq for HashableF64 {
+    fn eq(&self, other: &HashableF64) -> bool {
+        self.key() == other.key()
+    }
+}
+
+impl Eq for HashableF64 {}
+
 #[pyclass]
 #[derive(Clone, Debug)]
 pub struct PlayerState {
@@ -103,56 +132,6 @@ impl PlayerState {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-struct HashableF64(f64);
-
-impl HashableF64 {
-    fn key(&self) -> u64 {
-        self.0.to_bits()
-    }
-}
-
-impl hash::Hash for HashableF64 {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: hash::Hasher,
-    {
-        self.key().hash(state)
-    }
-}
-
-impl PartialEq for HashableF64 {
-    fn eq(&self, other: &HashableF64) -> bool {
-        self.key() == other.key()
-    }
-}
-
-impl Eq for HashableF64 {}
-
-#[dynamic(0)]
-static mut ROUND_CACHE: HashMap<HashableF64, HashableF64> = HashMap::new();
-
-fn round_speed(x: f64) -> f64 {
-    unsafe {
-        (ROUND_CACHE)
-            .entry(HashableF64(x))
-            .or_insert_with(|| {
-                HashableF64(Python::with_gil(|py| {
-                    let builtins = PyModule::import(py, "builtins").unwrap();
-                    let ret: f64 = builtins
-                        .getattr("round")
-                        .unwrap()
-                        .call1((TICK_S * x, 5))
-                        .unwrap()
-                        .extract()
-                        .unwrap();
-                    ret
-                }))
-            })
-            .0
-    }
-}
-
 impl PlayerState {
     pub fn center(&self) -> Pointf {
         Pointf {
@@ -171,7 +150,38 @@ impl PlayerState {
     }
 
     fn update_position(&mut self) {
-        self.move_by(round_speed(self.vx), round_speed(self.vy));
+        self.move_by(self.round_speed(self.vx), self.round_speed(self.vy));
+    }
+
+    fn round_speed(&self, x: f64) -> f64 {
+        let hx = HashableF64(x);
+
+        let read = ROUND_CACHE.read();
+        if let Some(res) = read.get(&hx) {
+            return res.0;
+        }
+
+        drop(read);
+
+        let mut write = ROUND_CACHE.write();
+        if let Some(res) = write.get(&hx) {
+            return res.0;
+        }
+
+        let res = HashableF64(Python::with_gil(|py| {
+            let builtins = PyModule::import(py, "builtins").unwrap();
+            let ret: f64 = builtins
+                .getattr("round")
+                .unwrap()
+                .call1((TICK_S * x, 5))
+                .unwrap()
+                .extract()
+                .unwrap();
+            ret
+        }));
+        write.insert(hx, res);
+
+        res.0
     }
 
     fn update_movement(

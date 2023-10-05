@@ -16,4 +16,5 @@ codegen-units = 1
 [dependencies]
 hashbrown = "0.14.1"
 pyo3 = "0.19.0"
+rayon = "1.8.0"
 static_init = "1.0.3"
