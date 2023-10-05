@@ -4,10 +4,10 @@ from typing import Callable
 
 from flask_wtf import FlaskForm
 from wtforms import BooleanField
+from wtforms import FloatField
 from wtforms import IntegerField
 from wtforms import StringField
 from wtforms import SubmitField
-from wtforms import FloatField
 
 
 class Settings(FlaskForm):
@@ -56,6 +56,16 @@ class Settings(FlaskForm):
         default=1,
         label="Extend deadly hitbox",
         description="Extend deadly hitbox by this amount of pixels",
+    )
+
+    validate_transitions = BooleanField(
+        default=False,
+        label="Validate transitions",
+        description="Validate transitions with rust",
+    )
+
+    draw_names = BooleanField(
+        default=True, label="Draw names", description="Draw objects names"
     )
 
     submit_button = SubmitField("Submit Form")

@@ -344,6 +344,10 @@ class Hackceler8(arcade.Window):
                     color,
                     border_width=cheats_settings["object_hitbox"],
                 )
+                if cheats_settings["draw_names"]:
+                    arcade.draw_text(
+                        f"{o.nametype} | {o.name}", rect.x1(), rect.y2() + 6, color
+                    )
 
     def render_map(self):
         tiled_map_size = self.game.tiled_map.parsed_map.map_size
@@ -373,7 +377,6 @@ class Hackceler8(arcade.Window):
             )
 
     def tick_game(self):
-        settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
             shift = True
@@ -403,17 +406,22 @@ class Hackceler8(arcade.Window):
             print("unknown moves")
             self.game.tick()
             return
-        expected = cheats_rust.get_transition(static_state, state, move, shift)
+
         self.game.tick()
-        attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
-        vals = [
-            (getattr(self.game.player, k1), getattr(expected, k2)) for k1, k2 in attrs
-        ]
-        if not all(x == y for x, y in vals):
-            print("incorrect transition:")
-            for (k1, k2), (v1, v2) in zip(attrs, vals):
-                print(k1, "predicted", v2, "got", v1)
-            print()
+
+        if get_settings()["validate_transitions"]:
+            settings, state, static_state = self.to_rust_state()
+            expected = cheats_rust.get_transition(static_state, state, move, shift)
+            attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
+            vals = [
+                (getattr(self.game.player, k1), getattr(expected, k2))
+                for k1, k2 in attrs
+            ]
+            if not all(x == y for x, y in vals):
+                print("incorrect transition:")
+                for (k1, k2), (v1, v2) in zip(attrs, vals):
+                    print(k1, "predicted", v2, "got", v1)
+                print()
 
     def on_update(self, _delta_time: float):
         if self.game is None:
