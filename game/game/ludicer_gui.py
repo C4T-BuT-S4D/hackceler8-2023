@@ -700,7 +700,8 @@ class Hackceler8(arcade.Window):
             and self.game is not None
         ):
             for _ in range(get_settings()["slow_ticks_count"]):
-                self.game.tick()
+                self.tick_game_with_movement_and_shooting()
+
             self.center_camera_to_player()
             print(
                 f"player state: {self.game.player.x=} {self.game.player.y=} "
