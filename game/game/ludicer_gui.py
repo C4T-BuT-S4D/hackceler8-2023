@@ -683,7 +683,10 @@ class Hackceler8(arcade.Window):
 
         # enable automatic shooting which will always select the next
         # weapon to shoot once we've shot the current one
-        if symbol == arcade.key.BRACKETRIGHT or symbol == arcade.key.BRACERIGHT:
+        auto_weapon_shooting_keys = (
+            symbol == arcade.key.BRACKETRIGHT or symbol == arcade.key.BRACERIGHT
+        )
+        if auto_weapon_shooting_keys:
             self.auto_weapon_shooting = not self.auto_weapon_shooting
 
         # disable automatic shooting when using semi-automatic one
@@ -709,7 +712,7 @@ class Hackceler8(arcade.Window):
             self.num_weapon_shifts = -1
 
         # toggle shooting for danmaku
-        if self.game.danmaku_system and arcade.key.SPACE:
+        if self.game.danmaku_system and auto_weapon_shooting_keys:
             self.auto_danmaku_shooting = not self.auto_danmaku_shooting
 
         if (
