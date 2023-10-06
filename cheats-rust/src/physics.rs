@@ -194,7 +194,7 @@ impl PlayerState {
                     builtins
                         .getattr("round")
                         .unwrap()
-                        .call1((TICK_S * x, 3))
+                        .call1((TICK_S * x, 5))
                         .unwrap()
                         .extract()
                         .unwrap(),
@@ -206,7 +206,7 @@ impl PlayerState {
                     builtins
                         .getattr("round")
                         .unwrap()
-                        .call1((TICK_S * y, 3))
+                        .call1((TICK_S * y, 5))
                         .unwrap()
                         .extract()
                         .unwrap(),
@@ -554,13 +554,36 @@ impl PhysState {
     }
 }
 
+impl PhysState {
+    fn player_x(&self) -> f64 {
+        (self.player.x * 10.0).round() / 10.0
+    }
+
+    fn player_y(&self) -> f64 {
+        (self.player.y * 10.0).round() / 10.0
+    }
+
+    fn player_vy(&self) -> f64 {
+        (self.player.vy * 1.0).round() / 1.0
+    }
+}
+
 impl PartialEq for PhysState {
     fn eq(&self, other: &Self) -> bool {
-        if self.player.x != other.player.x {
-            return false;
-        }
-        if self.player.y != other.player.y {
-            return false;
+        if self.settings.simple_geometry {
+            if self.player_x() != other.player_x() {
+                return false;
+            }
+            if self.player_y() != other.player_y() {
+                return false;
+            }
+        } else {
+            if self.player.x != other.player.x {
+                return false;
+            }
+            if self.player.y != other.player.y {
+                return false;
+            }
         }
 
         // if self.settings.simple_geometry {
@@ -597,8 +620,16 @@ impl PartialEq for PhysState {
             }
         }
 
-        if self.settings.mode == GameMode::Platformer && self.player.vy != other.player.vy {
-            return false;
+        if self.settings.mode == GameMode::Platformer {
+            if self.settings.simple_geometry {
+                if self.player.vy != other.player.vy {
+                    return false;
+                }
+            } else {
+                if self.player_vy() != other.player_vy() {
+                    return false;
+                }
+            }
         }
 
         true
@@ -609,8 +640,13 @@ impl Eq for PhysState {}
 
 impl Hash for PhysState {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.player.x.to_le_bytes());
-        state.write(&self.player.y.to_le_bytes());
+        if self.settings.simple_geometry {
+            state.write(&self.player_x().to_le_bytes());
+            state.write(&self.player_y().to_le_bytes());
+        } else {
+            state.write(&self.player.x.to_le_bytes());
+            state.write(&self.player.y.to_le_bytes());
+        }
 
         // if self.settings.simple_geometry {
         //     self.player.half_height().to_le_bytes().hash(state);
@@ -629,7 +665,11 @@ impl Hash for PhysState {
         }
 
         if self.settings.mode == GameMode::Platformer {
-            state.write(&self.player.vy.to_le_bytes());
+            if self.settings.simple_geometry {
+                state.write(&self.player_vy().to_le_bytes());
+            } else {
+                state.write(&self.player.vy.to_le_bytes());
+            }
         }
     }
 }
@@ -642,6 +682,7 @@ pub fn get_transition(
     next_move: Move,
     shift_pressed: bool,
 ) -> PlayerState {
+    state.detect_env_mod(&static_state);
     state.tick(next_move, shift_pressed, &static_state, &settings);
     state.player
 }
