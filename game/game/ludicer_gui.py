@@ -714,6 +714,20 @@ class Hackceler8(arcade.Window):
             )
             return
 
+        if symbol == arcade.key.V:
+            import json
+
+            keys_to_press = json.load(open("brainduck-moves.json"))
+            original_pressed_keys = self.game.raw_pressed_keys.copy()
+
+            for key in keys_to_press:
+                self.game.raw_pressed_keys = {key}
+                self.game.tick()
+                self.on_draw()
+                time.sleep(pyglet.clock.get_sleep_time(True))
+
+            self.game.raw_pressed_keys = original_pressed_keys
+
         if symbol == arcade.key.M:
             return
 
