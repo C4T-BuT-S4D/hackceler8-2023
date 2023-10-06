@@ -37,8 +37,8 @@ class Ludifier:
         self.max_y = map.size[1]
 
         self.counter = 0
-
-        self.advancement_speed = 7
+        # Ticks between new walls, lower is faster
+        self.advancement_speed = 30
         self.wall_width = self.map.tile_size[0]
 
     def tick(self):

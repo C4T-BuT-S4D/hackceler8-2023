@@ -44,6 +44,11 @@ class Llm:
             )
             try:
                 response = genai.chat(context=context, messages=text)
+                if self.codeword in response.last.lower():
+                    return (
+                        "*BEEEEEP*\nCODEWORD DETECTED IN RESPONSE, CENSORING OUTPUT",
+                        False,
+                    )
                 return response.last.upper(), False
             except Exception as e:
                 if "User location is not supported" in str(e):

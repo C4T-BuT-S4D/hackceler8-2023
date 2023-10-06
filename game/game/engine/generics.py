@@ -176,8 +176,8 @@ class GenericObject(hitbox.Hitbox):
             self.prev_x = self.x
             self.prev_y = self.y
             self.move(
-                round(constants.TICK_S * self.x_speed, 3),
-                round(constants.TICK_S * self.y_speed, 3),
+                round(constants.TICK_S * self.x_speed, 5),
+                round(constants.TICK_S * self.y_speed, 5),
             )
             logging.debug(f"New position is {self.x, self.y}")
 
