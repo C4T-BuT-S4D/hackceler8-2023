@@ -22,6 +22,7 @@ from arcade import key
 from components.magic_items import Item
 from engine import generics
 from engine import hitbox
+from engine.bf import Interpreter
 
 TICK_GRANULARITY = 5
 VALID_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 62, 60, 46, 44, 43, 45, 91, 93]
@@ -33,9 +34,7 @@ class DuckModes(Enum):
 
 
 class Brainduck(generics.GenericObject):
-    order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-
-    def __init__(self, coords, size, name, max_steps=1000):
+    def __init__(self, coords, size, name, max_steps=1000, instructions_override=None):
         self.perimeter = [
             hitbox.Point(coords.x, coords.y),
             hitbox.Point(coords.x + size.width, coords.y),
@@ -44,12 +43,13 @@ class Brainduck(generics.GenericObject):
         ]
         super().__init__(coords, "Brainduck", None, self.perimeter)
         self.blocking = False
+        self.instructions_override = instructions_override
         self.name = name
-        # secrets.seed(seed)
+        self.item_yielded = False
         self.stopped = False
         self.max_steps = max_steps
 
-        # self.interpreter = None
+        self.interpreter = None
 
         self.last_press_tics = 0
         self.failed = False
@@ -72,11 +72,11 @@ class Brainduck(generics.GenericObject):
     def reset(self):
         self.stopped = False
         self.active = False
+        self.pc = 0
 
         self.last_press_tics = 0
         self.failed = False
         self.total_steps = 0
-        self.pc = 0
         self.instructions = bytearray()
         self.mode = DuckModes.MODE_RECORDING
 
@@ -94,6 +94,7 @@ class Brainduck(generics.GenericObject):
             for k in pressed_keys:
                 if k != key.LSHIFT:
                     pressed = k
+                    # self.last_press_tics = game_tics
                     break
 
         if pressed and shift:
@@ -122,6 +123,12 @@ class Brainduck(generics.GenericObject):
         self.mode = DuckModes.MODE_EXECUTING
         self.walking_data = self.bf_to_walk(self.instructions)
 
+        if self.instructions_override is not None:
+            self.instructions = self.instructions_override
+
+        self.interpreter = Interpreter(self.instructions)
+        self.interpreter.start()
+
     def stop(self):
         self.stopped = True
 
@@ -129,19 +136,17 @@ class Brainduck(generics.GenericObject):
         if self.stopped:
             return
 
-        return self.step_once()
+        gotten = self.interpreter.execute_until_return()
+        if gotten is None:
+            return None
+        logging.debug(f"Got {gotten}")
+        if gotten in VALID_KEYS:
+            return self.num_to_keys(gotten)
+        else:
+            logging.critical(f"Invalid key received: {gotten}")
 
     def bf_to_walk(self, bts):
         return [self.num_to_keys(i) for i in bts]
-
-    def step_once(self) -> Optional[Tuple[int, bool]]:
-        if self.pc >= len(self.instructions):
-            self.stopped = True
-            return None
-        else:
-            ret = self.num_to_keys(self.instructions[self.pc])
-            self.pc += 1
-            return ret
 
     @staticmethod
     def num_to_keys(pressed: int) -> Optional[Tuple[int, bool]]:
@@ -167,7 +172,10 @@ class Brainduck(generics.GenericObject):
 
     def yield_item(self):
         if not self.item_yielded:
-            return Item(None, "Placeholder", "Placeholder", "violet", True)
+            self.item_yielded = True
+            return Item(
+                coords=None, name="goggles", display_name="Goggles", wearable=True
+            )
 
     def check_order(self, order):
         if order == self.interpreter.order:

@@ -14,6 +14,7 @@
 
 import logging
 
+from components import magic_items
 from engine import hitbox
 from engine.shop import Shop
 from engine.shop import ShopItem
@@ -22,7 +23,7 @@ from .npc import Npc
 
 
 class BankerNPC(Npc):
-    solved = {}
+    solved = False
 
     def __init__(self, coords, name, walk_data):
         super().__init__(
@@ -37,11 +38,15 @@ class BankerNPC(Npc):
         self.shop = Shop(
             items=[
                 ShopItem("Cookie", 1, True),
-                ShopItem("Badge", 100),
+                ShopItem("Badge", 100, True, 10000),
                 ShopItem("Flag", 100000),
             ],
             initial_cash=100,
         )
+        self.item = magic_items.Item(
+            coords=None, name="key_blue", display_name="Blue key", color="blue"
+        )
+
         outline = [
             hitbox.Point(coords.x - 15, coords.y - 25),
             hitbox.Point(coords.x + 15, coords.y - 25),
@@ -66,6 +71,13 @@ class BankerNPC(Npc):
         bought_success = self.shop.buy(item_name)
         self.update_text()
         if bought_success:
+            if item_name == "Flag":
+                if not self.solved:
+                    item_name = "Flag! (I also snuck in something in your inventory)"
+                    self.game.gather_items([self.item])
+                    self.solved = True
+                else:
+                    item_name = "Flag! (But it's not like you getting second item)"
             self.display_textbox(
                 f"Nice, you now have one {item_name}",
                 process_fun=self.basic_interaction,
