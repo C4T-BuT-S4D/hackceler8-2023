@@ -305,17 +305,14 @@ impl PlayerState {
         active_modifier: Option<&EnvModifier>,
     ) {
         self.direction = direction;
-        let move_modifier = if (matches!(direction, Direction::E | Direction::W)
-            || search_settings.mode == GameMode::Scroller)
-            && sprinting
-        {
-            1.5
-        } else {
-            1.0
-        };
 
         match direction {
             Direction::E | Direction::W => {
+                let move_modifier = if sprinting {
+                    search_settings.speed_multiplier
+                } else {
+                    1.0
+                };
                 self.vx = if direction == Direction::E {
                     self.movement_speed(active_modifier) * move_modifier
                 } else {
@@ -329,6 +326,11 @@ impl PlayerState {
                 {
                     return;
                 }
+                let move_modifier = if sprinting && search_settings.mode == GameMode::Scroller {
+                    search_settings.speed_multiplier
+                } else {
+                    search_settings.jump_multiplier
+                };
                 self.vy = if settings.mode == GameMode::Scroller {
                     PLAYER_MOVEMENT_SPEED * move_modifier
                 } else {
@@ -338,6 +340,11 @@ impl PlayerState {
             }
             Direction::S => {
                 if self.in_the_air && settings.mode == GameMode::Scroller {
+                    let move_modifier = if sprinting {
+                        search_settings.speed_multiplier
+                    } else {
+                        1.0
+                    };
                     self.vy = -PLAYER_MOVEMENT_SPEED * move_modifier;
                 }
             }

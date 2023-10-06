@@ -82,6 +82,12 @@ class Settings(FlaskForm):
         default=True, label="Draw lines", description="Draw lines to important objects"
     )
 
+    slow_ticks_count = IntegerField(
+        default=1,
+        label="Slow ticks count",
+        description="Number of ticks to emulate in slow_ticks_mode",
+    )
+
     submit_button = SubmitField("Submit Form")
 
 

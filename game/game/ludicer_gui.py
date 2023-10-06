@@ -367,6 +367,10 @@ class Hackceler8(arcade.Window):
                     color = arcade.color.CYAN
                 case "Weapon":
                     color = arcade.color.CORAL
+                case "Ouch":
+                    color = arcade.color.CADMIUM_GREEN
+                case "Fire":
+                    color = arcade.color.ATOMIC_TANGERINE
                 case _:
                     print(f"skipped object {o.nametype}")
 
@@ -534,7 +538,9 @@ class Hackceler8(arcade.Window):
             return
 
         if get_settings()["validate_transitions"]:
-            expected = cheats_rust.get_transition(settings, static_state, state, move, shift)
+            expected = cheats_rust.get_transition(
+                settings, static_state, state, move, shift
+            )
 
         self.tick_game_with_shooting()
 
@@ -639,13 +645,8 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if symbol == arcade.key.J and modifiers & arcade.key.MOD_CTRL:
-            self.slow_ticks_mode = True
-            logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
-            return
-
-        if symbol == arcade.key.K and modifiers & arcade.key.MOD_CTRL:
-            self.slow_ticks_mode = False
+        if symbol == arcade.key.EQUAL:
+            self.slow_ticks_mode = not self.slow_ticks_mode
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
 
@@ -681,7 +682,8 @@ class Hackceler8(arcade.Window):
             and symbol == arcade.key.BACKSPACE
             and self.game is not None
         ):
-            self.game.tick()
+            for _ in range(get_settings()["slow_ticks_count"]):
+                self.game.tick()
             self.center_camera_to_player()
             print(
                 f"player state: {self.game.player.x=} {self.game.player.y=} "
@@ -731,6 +733,8 @@ class Hackceler8(arcade.Window):
             enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
             simple_geometry=cheat_settings["simple_geometry"],
             state_batch_size=cheat_settings["state_batch_size"],
+            speed_multiplier=player.speed_multiplier,
+            jump_multiplier=player.jump_multiplier,
         )
 
         static_objects = [

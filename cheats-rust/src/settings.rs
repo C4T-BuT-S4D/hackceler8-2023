@@ -29,6 +29,8 @@ pub struct SearchSettings {
     pub enable_vpush: bool,
     pub simple_geometry: bool,
     pub state_batch_size: usize,
+    pub speed_multiplier: f64,
+    pub jump_multiplier: f64,
 }
 
 #[pymethods]
@@ -45,6 +47,8 @@ impl SearchSettings {
         enable_vpush: bool,
         simple_geometry: bool,
         state_batch_size: usize,
+        speed_multiplier: f64,
+        jump_multiplier: f64,
     ) -> Self {
         Self {
             mode,
@@ -56,6 +60,8 @@ impl SearchSettings {
             enable_vpush,
             simple_geometry,
             state_batch_size,
+            speed_multiplier,
+            jump_multiplier,
         }
     }
 
