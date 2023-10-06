@@ -14,6 +14,7 @@
 
 import logging
 import os
+import shutil
 import time
 import uuid
 
@@ -706,6 +707,32 @@ class Hackceler8(arcade.Window):
                 f"{self.game.player.health=} "
             )
             return
+
+        if symbol == arcade.key.AMPERSAND:
+            original_pressed_keys = self.game.raw_pressed_keys.copy()
+
+            for map in self.game.arena_mapping.values():
+                logging.info(f"Switching to Map {map}")
+                self.game.switch_maps(map)
+
+                start = time.time()
+                while time.time() - start < 5:
+                    self.game.raw_pressed_keys = set()
+                    self.game.tick()
+                    self.on_draw()
+
+                self.render_map()
+                cheats_path = os.path.join(
+                    os.path.dirname(__file__), "cheats", "static"
+                )
+                shutil.move(
+                    os.path.join(cheats_path, "current-map.png"),
+                    os.path.join(cheats_path, f"map-{map}.png"),
+                )
+
+            logging.info("Rendered all maps!")
+
+            self.game.raw_pressed_keys = original_pressed_keys
 
         if symbol == arcade.key.M:
             return
