@@ -181,11 +181,25 @@ class Hackceler8(arcade.Window):
         self.gui_camera.use()
 
         if self.game is None:
+            arcade.start_render()
             self.main_menu_manager.draw()
             return
 
         self.camera.use()
         arcade.start_render()
+
+        if self.game.cheating_detected:
+            self.gui_camera.use()
+            arcade.draw_text(
+                "OUT OF SYNC, CHEATING DETECTED",
+                400,
+                600,
+                arcade.csscolor.ORANGE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
+            arcade.finish_render()
+            return
 
         self.draw_level()
 
@@ -227,31 +241,24 @@ class Hackceler8(arcade.Window):
 
         if self.game.won:
             arcade.draw_text(
-                "CONGRATULATIONS, YOU WIN!",
-                450,
+                "CONGRATULATIONS, YOU BEAT ALL %d CHALLENGES!"
+                % (len(self.game.global_match_items.items)),
+                300,
                 600,
-                arcade.csscolor.WHITE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
-            arcade.draw_text(
-                "TOTAL PLAY TIME: %s" % self.game.play_time_str(),
-                455,
-                550,
                 arcade.csscolor.WHITE,
                 18,
                 font_name=constants.FONT_NAME,
             )
 
-        if self.game.cheating_detected:
-            arcade.draw_text(
-                "OUT OF SYNC, CHEATING DETECTED",
-                400,
-                600,
-                arcade.csscolor.ORANGE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
+        # if self.game.cheating_detected:
+        #     arcade.draw_text(
+        #         "OUT OF SYNC, CHEATING DETECTED",
+        #         400,
+        #         600,
+        #         arcade.csscolor.ORANGE,
+        #         18,
+        #         font_name=constants.FONT_NAME,
+        #     )
 
         if self.game.display_inventory:
             if (
@@ -295,12 +302,16 @@ class Hackceler8(arcade.Window):
                 continue
             o.draw()
 
+        if self.game.logic_engine is not None:
+            self.game.logic_engine.draw()
+
         if self.game.grenade_system:
             self.game.grenade_system.draw()
         self.game.combat_system.draw()
 
         if self.game.player is not None:
             self.game.player.draw()
+            # this draws the outline
 
         for o in self.game.objects:
             if not o.render_above_player:
@@ -356,6 +367,10 @@ class Hackceler8(arcade.Window):
                     color = arcade.color.CYAN
                 case "Weapon":
                     color = arcade.color.CORAL
+                case "Ouch":
+                    color = arcade.color.CADMIUM_GREEN
+                case "Fire":
+                    color = arcade.color.ATOMIC_TANGERINE
                 case _:
                     print(f"skipped object {o.nametype}")
 
@@ -394,6 +409,16 @@ class Hackceler8(arcade.Window):
                             color=line_color,
                             line_width=2,
                         )
+
+                    if o.nametype == "Portal":
+                        arcade.draw_line(
+                            start_x=o.x,
+                            start_y=o.y,
+                            end_x=o.dest.x,
+                            end_y=o.dest.y,
+                            color=arcade.color.PURPLE,
+                            line_width=2,
+                        )
                     # render lines to something else as well
 
     def render_map(self):
@@ -426,6 +451,15 @@ class Hackceler8(arcade.Window):
     def tick_game_with_shooting(self):
         added_keys = set()
         weapon_firing_enabled = self.num_weapon_shifts >= 0
+
+        # stop firing if the player or his weapons are gone (map switched, died, ended level)
+        if (
+            weapon_firing_enabled
+            and not self.game
+            or not self.game.player
+            or len(self.game.player.weapons) < 1
+        ):
+            self.num_weapon_shifts = -1
 
         # on correct weapon, shoot it if we can
         if (
@@ -514,7 +548,9 @@ class Hackceler8(arcade.Window):
             return
 
         if get_settings()["validate_transitions"]:
-            expected = cheats_rust.get_transition(static_state, state, move, shift)
+            expected = cheats_rust.get_transition(
+                settings, static_state, state, move, shift
+            )
 
         self.tick_game_with_shooting()
 
@@ -619,13 +655,8 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if symbol == arcade.key.J and modifiers & arcade.key.MOD_CTRL:
-            self.slow_ticks_mode = True
-            logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
-            return
-
-        if symbol == arcade.key.K and modifiers & arcade.key.MOD_CTRL:
-            self.slow_ticks_mode = False
+        if symbol == arcade.key.EQUAL:
+            self.slow_ticks_mode = not self.slow_ticks_mode
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
 
@@ -661,7 +692,8 @@ class Hackceler8(arcade.Window):
             and symbol == arcade.key.BACKSPACE
             and self.game is not None
         ):
-            self.game.tick()
+            for _ in range(get_settings()["slow_ticks_count"]):
+                self.game.tick()
             self.center_camera_to_player()
             print(
                 f"player state: {self.game.player.x=} {self.game.player.y=} "
@@ -672,8 +704,6 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.M:
-            logging.info("Showing menu")
-            self.show_menu()
             return
 
         if self.force_movement_keys:
@@ -713,6 +743,8 @@ class Hackceler8(arcade.Window):
             enable_vpush=any(o.nametype == "SpeedTile" for o in self.game.objects),
             simple_geometry=cheat_settings["simple_geometry"],
             state_batch_size=cheat_settings["state_batch_size"],
+            speed_multiplier=player.speed_multiplier,
+            jump_multiplier=player.jump_multiplier,
         )
 
         static_objects = [

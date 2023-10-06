@@ -109,7 +109,7 @@ class Enemy(generics.GenericObject):
             return
 
         if len(self.walk_data.data) > 0:
-            walk_dir = self.walk_data.walk()
+            walk_dir = self.walk_data.walk(self.game)
             if walk_dir == "E":
                 self.sprite.set_flipped(False)
             if walk_dir == "W":
@@ -163,15 +163,14 @@ class Enemy(generics.GenericObject):
         )
         self.game.combat_system.active_projectiles.append(proj)
 
-    @classmethod
-    def respawn(self):
-        for e in self.respawn_list.copy():
+    def respawn():
+        for e in Enemy.respawn_list.copy():
             if e.respawn_timer > 0:
                 e.respawn_timer -= 1
             elif not e._spawnkill():
                 e.reset()
                 e.sprite.alpha = 0
-                self.respawn_list.remove(e)
+                Enemy.respawn_list.remove(e)
 
     def check_control_inversion(game):
         if game.player == None:
@@ -328,6 +327,8 @@ class Martian(Enemy):
             hitbox.Point(coords.x - 15, coords.y + 22),
         ]
         self._update(outline)
+        if len(walk_data) > 0:
+            self.sprite.set_texture("resources/enemies/martian_float.png")
 
     def set_animation(self, name):
         # No walk anim

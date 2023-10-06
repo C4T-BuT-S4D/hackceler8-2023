@@ -28,6 +28,7 @@ class PhysicsEngine:
         self,
         gravity: int = GRAVITY_CONSTANT,
         platformer_rules: bool = True,
+        danmaku_rules: bool = False,
         objects: list[generics.GenericObject] = None,
         qt=None,
         obj_map=None,
@@ -64,6 +65,7 @@ class PhysicsEngine:
 
         self.qt = qt
         self.platformer_rules = self.player.platformer_rules = platformer_rules
+        self.player.danmaku_rules = danmaku_rules
         if self.platformer_rules:
             self.player.load_sprite(Player.PLATFORMER_TILESET)
             self.player.wear_item()
@@ -159,6 +161,8 @@ class PhysicsEngine:
         for o1 in self.objects + self.static_objects + self.moving_platforms:
             if o1 is player:
                 continue
+            if o1.nametype in {"Toggle"}:
+                continue
             c, mpv = o1.collides(player)
             if c:
                 if (
@@ -169,21 +173,14 @@ class PhysicsEngine:
                         "Ouch",
                         "Fire",
                         "Arena",
-                        "Buffer",
-                        "Max",
-                        "Min",
-                        "Add",
-                        "Multiply",
-                        "Invert",
-                        "Negate",
-                        "Constant",
-                        "Toggle",
                         "Portal",
                         "Spike",
                         "Switch",
                         "Soul",
                         "SpeedTile",
                     }
+                    or o1.nametype == "LogicDoor"
+                    and not o1.blocking
                     or o1.nametype == "Enemy"
                     and (o1.dead or not o1.blocking)
                 ):
@@ -223,6 +220,7 @@ class PhysicsEngine:
             match n.nametype:
                 case "Item":
                     if n.collectable:
+                        logging.info(f"Player collected new item {n.name}")
                         self.tmp_loot.append(n)
                         self.objects.remove(n)
                 case "ExitArea":
@@ -276,7 +274,11 @@ class PhysicsEngine:
 
         else:
             logging.debug("Positive MPV, collision was upwards")
-            min_y_o2 = o1.get_lowest_point()
+            delta_e = 0
+            if o1.nametype == "MovingPlatform":
+                delta_e = abs(o1.y_speed * 3)
+                logging.info(f"Adding a delta of {delta_e} to offset moving platform")
+            min_y_o2 = o1.get_lowest_point() - delta_e
             player.place_at(player.x, min_y_o2 - player.get_height() // 2)
 
     @staticmethod

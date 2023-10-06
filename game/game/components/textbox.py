@@ -65,8 +65,6 @@ class Textbox:
         self.choices = choices
         self.selection = 0
 
-        if len(choices) > self.MAX_LINES:
-            logging.error(f"Too many choices to display: {choices}")
         if free_text and len(choices) > 0:
             logging.error("Both free text and multiple choice specified")
 
@@ -113,6 +111,9 @@ class Textbox:
         return self.make_space_for_input(lines, n)
 
     def make_space_for_input(self, lines, n):
+        # Only MAX_LINES-1 choices displayed at once.
+        if n > self.MAX_LINES - 1:
+            n = self.MAX_LINES - 1
         # Make sure there's enough empty space for the choices or free text input.
         max_end_lines = self.MAX_LINES - n
         end_lines = len(lines) % self.MAX_LINES
@@ -163,6 +164,9 @@ class Textbox:
 
     def get_choice_objs(self, choices):
         choice_objs = []
+        n = len(choices)
+        if n > self.MAX_LINES - 1:
+            n = self.MAX_LINES - 1
         for i, text in enumerate(choices):
             if self.game.is_server:
                 o = HeadlessTextObj(text)
@@ -171,7 +175,8 @@ class Textbox:
                     text,
                     self.TEXT_X + 35,
                     self.TEXT_Y
-                    - self.LINE_DISTANCE * (i + self.MAX_LINES - len(choices)),
+                    - self.LINE_DISTANCE
+                    * ((i % (self.MAX_LINES - 1)) + self.MAX_LINES - n),
                     self.TEXT_COLOR,
                     self.TEXT_SIZE,
                     font_name=constants.FONT_NAME,
@@ -262,6 +267,7 @@ class Textbox:
             t.draw()
         if self.choices_active():
             self.draw_choices()
+            self.draw_more_arrow()
         elif self.free_text_active():
             self.draw_free_text_input()
         else:
@@ -287,8 +293,12 @@ class Textbox:
         return arcade.key.E
 
     def draw_choices(self):
+        i = 0
+        n = self.MAX_LINES - 1
         for c in self.choice_objs:
-            c.draw()
+            if len(self.choice_objs) <= n or (i // n) == (self.selection // n):
+                c.draw()
+            i += 1
         self.choice_arrow.draw_scaled(
             42, self.choice_objs[self.selection].y + 17, self.BG_SCALE
         )
@@ -306,5 +316,15 @@ class Textbox:
         )
 
     def draw_more_arrow(self):
-        if self.done_scrolling and int(floor(self.more_arrow_time * 2)) % 2 == 0:
+        if int(floor(self.more_arrow_time * 2)) % 2 != 0:
+            return
+        if self.choices_active():
+            n = self.MAX_LINES - 1
+            if (
+                len(self.choice_objs) > n
+                and len(self.choice_objs) - self.selection >= n
+            ):
+                self.more_arrow.draw_scaled(1200, 50, self.BG_SCALE)
+            return
+        if self.done_scrolling:
             self.more_arrow.draw_scaled(1200, 50, self.BG_SCALE)

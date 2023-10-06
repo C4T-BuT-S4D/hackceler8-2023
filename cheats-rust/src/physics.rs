@@ -7,6 +7,7 @@ use pyo3::types::PyModule;
 use pyo3::{pyclass, pyfunction, pymethods, Python};
 use static_init::dynamic;
 
+use crate::settings::SearchSettings;
 use crate::{
     env_modifier::EnvModifier,
     geometry::Pointf,
@@ -124,11 +125,11 @@ impl PlayerState {
 
 impl PlayerState {
     pub fn half_height(&self) -> f64 {
-        ((self.hy_max - self.hy_min) / 2.0).floor()
+        16.0
     }
 
     pub fn half_width(&self) -> f64 {
-        ((self.hx_max - self.hx_min) / 2.0).floor()
+        16.0
     }
 }
 
@@ -226,6 +227,7 @@ impl PlayerState {
     fn update_movement(
         &mut self,
         mov: Move,
+        search_settings: &SearchSettings,
         settings: &PhysicsSettings,
         shift_pressed: bool,
         active_modifier: Option<&EnvModifier>,
@@ -237,16 +239,40 @@ impl PlayerState {
 
         if self.can_control_movement {
             if mov == Move::D || mov == Move::WD || mov == Move::SD {
-                self.change_direction(settings, Direction::E, shift_pressed, active_modifier);
+                self.change_direction(
+                    search_settings,
+                    settings,
+                    Direction::E,
+                    shift_pressed,
+                    active_modifier,
+                );
             }
             if mov == Move::A || mov == Move::WA || mov == Move::SA {
-                self.change_direction(settings, Direction::W, shift_pressed, active_modifier);
+                self.change_direction(
+                    search_settings,
+                    settings,
+                    Direction::W,
+                    shift_pressed,
+                    active_modifier,
+                );
             }
             if mov == Move::W || mov == Move::WA || mov == Move::WD {
-                self.change_direction(settings, Direction::N, shift_pressed, active_modifier);
+                self.change_direction(
+                    search_settings,
+                    settings,
+                    Direction::N,
+                    shift_pressed,
+                    active_modifier,
+                );
             }
             if mov == Move::S || mov == Move::SA || mov == Move::SD {
-                self.change_direction(settings, Direction::S, shift_pressed, active_modifier);
+                self.change_direction(
+                    search_settings,
+                    settings,
+                    Direction::S,
+                    shift_pressed,
+                    active_modifier,
+                );
             }
 
             self.vpush = f64::max(0.0, self.vpush - PUSH_DELTA);
@@ -272,6 +298,7 @@ impl PlayerState {
 
     fn change_direction(
         &mut self,
+        search_settings: &SearchSettings,
         settings: &PhysicsSettings,
         direction: Direction,
         sprinting: bool,
@@ -281,7 +308,11 @@ impl PlayerState {
 
         match direction {
             Direction::E | Direction::W => {
-                let move_modifier = if sprinting { 1.5 } else { 1.0 };
+                let move_modifier = if sprinting {
+                    search_settings.speed_multiplier
+                } else {
+                    1.0
+                };
                 self.vx = if direction == Direction::E {
                     self.movement_speed(active_modifier) * move_modifier
                 } else {
@@ -295,16 +326,26 @@ impl PlayerState {
                 {
                     return;
                 }
-                self.vy = if settings.mode == GameMode::Scroller {
-                    PLAYER_MOVEMENT_SPEED
+                let move_modifier = if sprinting && search_settings.mode == GameMode::Scroller {
+                    search_settings.speed_multiplier
                 } else {
-                    self.jump_speed(active_modifier)
+                    search_settings.jump_multiplier
+                };
+                self.vy = if settings.mode == GameMode::Scroller {
+                    PLAYER_MOVEMENT_SPEED * move_modifier
+                } else {
+                    self.jump_speed(active_modifier) * move_modifier
                 };
                 self.in_the_air = true;
             }
             Direction::S => {
                 if self.in_the_air && settings.mode == GameMode::Scroller {
-                    self.vy = -PLAYER_MOVEMENT_SPEED;
+                    let move_modifier = if sprinting {
+                        search_settings.speed_multiplier
+                    } else {
+                        1.0
+                    };
+                    self.vy = -PLAYER_MOVEMENT_SPEED * move_modifier;
                 }
             }
         }
@@ -345,13 +386,20 @@ impl PhysState {
     }
 }
 impl PhysState {
-    pub fn tick(&mut self, mov: Move, shift_pressed: bool, state: &StaticState) {
+    pub fn tick(
+        &mut self,
+        mov: Move,
+        shift_pressed: bool,
+        state: &StaticState,
+        search_settings: &SearchSettings,
+    ) {
         for speed_tile in &state.speed_tiles {
             speed_tile.tick(self);
         }
 
         self.player.update_movement(
             mov,
+            search_settings,
             &self.settings,
             shift_pressed,
             self.get_active_modifier(state),
@@ -515,27 +563,27 @@ impl PartialEq for PhysState {
             return false;
         }
 
-        if self.settings.simple_geometry {
-            if self.player.half_height().to_le_bytes() != other.player.half_height().to_le_bytes() {
-                return false;
-            }
-            if self.player.half_width().to_le_bytes() != other.player.half_width().to_le_bytes() {
-                return false;
-            }
-        } else {
-            if self.player.hx_min != other.player.hx_min {
-                return false;
-            }
-            if self.player.hx_max != other.player.hx_max {
-                return false;
-            }
-            if self.player.hy_min != other.player.hy_min {
-                return false;
-            }
-            if self.player.hy_max != other.player.hy_max {
-                return false;
-            }
-        }
+        // if self.settings.simple_geometry {
+        //     if self.player.half_height().to_le_bytes() != other.player.half_height().to_le_bytes() {
+        //         return false;
+        //     }
+        //     if self.player.half_width().to_le_bytes() != other.player.half_width().to_le_bytes() {
+        //         return false;
+        //     }
+        // } else {
+        //     if self.player.hx_min != other.player.hx_min {
+        //         return false;
+        //     }
+        //     if self.player.hx_max != other.player.hx_max {
+        //         return false;
+        //     }
+        //     if self.player.hy_min != other.player.hy_min {
+        //         return false;
+        //     }
+        //     if self.player.hy_max != other.player.hy_max {
+        //         return false;
+        //     }
+        // }
 
         if self.settings.enable_vpush {
             if self.player.vpush != other.player.vpush {
@@ -564,15 +612,15 @@ impl Hash for PhysState {
         state.write(&self.player.x.to_le_bytes());
         state.write(&self.player.y.to_le_bytes());
 
-        if self.settings.simple_geometry {
-            self.player.half_height().to_le_bytes().hash(state);
-            self.player.half_width().to_le_bytes().hash(state);
-        } else {
-            state.write(&self.player.hx_min.to_le_bytes());
-            state.write(&self.player.hx_max.to_le_bytes());
-            state.write(&self.player.hy_min.to_le_bytes());
-            state.write(&self.player.hy_max.to_le_bytes());
-        }
+        // if self.settings.simple_geometry {
+        //     self.player.half_height().to_le_bytes().hash(state);
+        //     self.player.half_width().to_le_bytes().hash(state);
+        // } else {
+        //     state.write(&self.player.hx_min.to_le_bytes());
+        //     state.write(&self.player.hx_max.to_le_bytes());
+        //     state.write(&self.player.hy_min.to_le_bytes());
+        //     state.write(&self.player.hy_max.to_le_bytes());
+        // }
 
         if self.settings.enable_vpush {
             state.write(&self.player.vpush.to_le_bytes());
@@ -588,11 +636,12 @@ impl Hash for PhysState {
 
 #[pyfunction]
 pub fn get_transition(
+    settings: SearchSettings,
     static_state: StaticState,
     mut state: PhysState,
     next_move: Move,
     shift_pressed: bool,
 ) -> PlayerState {
-    state.tick(next_move, shift_pressed, &static_state);
+    state.tick(next_move, shift_pressed, &static_state, &settings);
     state.player
 }
