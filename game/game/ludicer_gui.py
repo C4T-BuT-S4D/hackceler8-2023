@@ -64,6 +64,8 @@ class Hackceler8(arcade.Window):
         self.force_movement_keys = []
         self.force_movement_keys_per_frame = 1
 
+        self.shop_cheating = False
+
         self.num_weapon_shifts = -1
         self.auto_weapon_shooting = False
         self.auto_danmaku_shooting = False
@@ -470,6 +472,65 @@ class Hackceler8(arcade.Window):
         added_keys = set()
         weapon_firing_enabled = self.num_weapon_shifts >= 0
 
+        if self.shop_cheating:
+            def emulate(keys: set, sleep=5):
+                self.game.raw_pressed_keys = keys
+                self.game.tick()
+                self.on_draw()
+                time.sleep(pyglet.clock.get_sleep_time(True))
+                self.game.raw_pressed_keys = set()
+                for _ in range(sleep):
+                    self.game.tick()
+                    self.on_draw()
+                    time.sleep(pyglet.clock.get_sleep_time(True))
+
+                # time.sleep(1)
+                # time.sleep(pyglet.clock.get_sleep_time(True))
+
+            emulate({arcade.key.E}, sleep=1)
+            emulate({arcade.key.E}, sleep=1)
+            for _ in range(150):
+                # buy
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # down
+                emulate({arcade.key.S})
+
+                # buy
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # skip
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # skip
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # down
+                emulate({arcade.key.S}, sleep=1)
+
+                # sell
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # choose
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # skip
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+                # skip
+                emulate({arcade.key.E}, sleep=1)
+                emulate({arcade.key.E}, sleep=1)
+
+            self.shop_cheating = False
+            return
+
         # stop firing if the player or his weapons are gone (map switched, died, ended level)
         if (
             weapon_firing_enabled
@@ -674,6 +735,11 @@ class Hackceler8(arcade.Window):
 
     def on_key_press(self, symbol: int, modifiers: int):
         if self.game is None:
+            return
+
+        if symbol == arcade.key.U and modifiers & arcade.key.MOD_CTRL:
+            self.shop_cheating = not self.shop_cheating
+            logging.info("Shop cheating: %s", self.shop_cheating)
             return
 
         if symbol == arcade.key.EQUAL:
