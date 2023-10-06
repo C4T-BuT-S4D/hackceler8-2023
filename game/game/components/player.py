@@ -49,13 +49,11 @@ class Player(generics.GenericObject):
         self.last_movement = None
         self.running = False
         self.platformer_rules = False
-        self.danmaku_rules = False
         self.allowed_directions = set()
         self.reset_movements()
         self.jump_override = False
         self.inverted_controls = False
         self.weapons = []
-        self.anomaly_speed_multiplier = 1
 
         # modifiers
         self.speed_multiplier = 1.5
@@ -82,14 +80,10 @@ class Player(generics.GenericObject):
 
     def tick(self, pressed_keys, _newly_pressed_keys, reset_speed=True):
         self.update_movement(pressed_keys, reset_speed)
+        if self.immobilized():
+            self.x_speed = self.y_speed = 0
         self.update_animation()
         super().tick()
-
-    def update_position(self):
-        if self.immobilized():
-            return
-
-        super().update_position()
 
     def update_movement(self, pressed_keys, reset_speed=True):
         self.x_speed = 0
@@ -100,6 +94,7 @@ class Player(generics.GenericObject):
             return
 
         self.running = False
+
         if self.can_control_movement:
             sprinting = arcade.key.LSHIFT in pressed_keys
             if (arcade.key.D in pressed_keys) and (arcade.key.A not in pressed_keys):
@@ -143,36 +138,24 @@ class Player(generics.GenericObject):
         self.direction = direction
 
         speed_multplier = 1
-        if self.danmaku_rules:
-            # in danmaku, sprinting is "focusing"
-            speed_multplier = 0.85 if sprinting else 2
-        else:
-            if not self.platformer_rules or (
-                self.direction == self.DIR_E or self.direction == self.DIR_W
-            ):
-                if sprinting:
-                    speed_multplier = self.speed_multiplier
-                    self.running = True
+        if not self.platformer_rules or (
+            self.direction == self.DIR_E or self.direction == self.DIR_W
+        ):
+            if sprinting:
+                speed_multplier = self.speed_multiplier
+                self.running = True
 
         if self.direction == self.DIR_E or self.direction == self.DIR_W:
             self.face_towards = direction
             if direction == self.DIR_E:
                 if "L" in self.allowed_directions:
-                    self.x_speed = (
-                        self.base_x_speed
-                        * speed_multplier
-                        * self.anomaly_speed_multiplier
-                    )
+                    self.x_speed = self.base_x_speed * speed_multplier
                     self.sprite.set_flipped(False)
                     self.last_movement = "right"
             else:
                 if "R" in self.allowed_directions:
                     self.last_movement = "left"
-                    self.x_speed = (
-                        -self.base_x_speed
-                        * speed_multplier
-                        * self.anomaly_speed_multiplier
-                    )
+                    self.x_speed = -self.base_x_speed * speed_multplier
                     if "R" in self.allowed_directions:
                         if self.platformer_rules:
                             self.sprite.set_flipped(True)
@@ -186,11 +169,7 @@ class Player(generics.GenericObject):
                 if self.platformer_rules:
                     self.y_speed = self.base_y_speed * self.jump_multiplier
                 else:
-                    self.y_speed = (
-                        self.base_y_speed
-                        * speed_multplier
-                        * self.anomaly_speed_multiplier
-                    )
+                    self.y_speed = self.base_y_speed * speed_multplier
                 self.last_movement = "up"
                 self.in_the_air = True
             else:
@@ -201,11 +180,7 @@ class Player(generics.GenericObject):
                 if self.in_the_air:
                     if not self.platformer_rules:
                         # This is a hack because we're still clipping through
-                        self.y_speed = (
-                            -self.base_y_speed
-                            * speed_multplier
-                            * self.anomaly_speed_multiplier
-                        )
+                        self.y_speed = -self.base_y_speed * speed_multplier
                         self.last_movement = "down"
 
     def update_animation(self):
