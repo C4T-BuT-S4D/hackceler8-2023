@@ -107,7 +107,7 @@ class Inventory:
             )
         )
         quit_btn = QuitButton(
-            text="QUIT", width=200, style={"font_name": constants.FONT_NAME}
+            text="QUIT", width=210, style={"font_name": constants.FONT_NAME}
         )
         self.stats_box.add(quit_btn)
         self.stats_box.add(

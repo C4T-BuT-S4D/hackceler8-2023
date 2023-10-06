@@ -26,7 +26,6 @@ class Player(generics.GenericObject):
     DIR_W = "W"
     PLATFORMER_TILESET = "resources/character/AnimationSheet_Mew.tmx"
     SCROLLER_TILESET = "resources/character/AnimationSheet_OverheadMew.tmx"
-    MAX_HEALTH = 100
 
     def __init__(self, coords, outline):
         super().__init__(
@@ -50,11 +49,21 @@ class Player(generics.GenericObject):
         self.last_movement = None
         self.running = False
         self.platformer_rules = False
+        self.danmaku_rules = False
         self.allowed_directions = set()
         self.reset_movements()
         self.jump_override = False
         self.inverted_controls = False
         self.weapons = []
+        self.anomaly_speed_multiplier = 1
+
+        # modifiers
+        self.speed_multiplier = 1.5
+        self.jump_multiplier = 1
+
+        self.speed_bonus = False
+        self.jump_bonus = False
+        self.health_bonus = False
 
         # Will be overwritten
         self.game = None
@@ -73,10 +82,14 @@ class Player(generics.GenericObject):
 
     def tick(self, pressed_keys, _newly_pressed_keys, reset_speed=True):
         self.update_movement(pressed_keys, reset_speed)
-        if self.immobilized():
-            self.x_speed = self.y_speed = 0
         self.update_animation()
         super().tick()
+
+    def update_position(self):
+        if self.immobilized():
+            return
+
+        super().update_position()
 
     def update_movement(self, pressed_keys, reset_speed=True):
         self.x_speed = 0
@@ -129,21 +142,37 @@ class Player(generics.GenericObject):
     def change_direction(self, direction, sprinting):
         self.direction = direction
 
+        speed_multplier = 1
+        if self.danmaku_rules:
+            # in danmaku, sprinting is "focusing"
+            speed_multplier = 0.85 if sprinting else 2
+        else:
+            if not self.platformer_rules or (
+                self.direction == self.DIR_E or self.direction == self.DIR_W
+            ):
+                if sprinting:
+                    speed_multplier = self.speed_multiplier
+                    self.running = True
+
         if self.direction == self.DIR_E or self.direction == self.DIR_W:
             self.face_towards = direction
-            speed_multplier = 1
-            if sprinting:
-                speed_multplier = 1.5
-                self.running = True
             if direction == self.DIR_E:
                 if "L" in self.allowed_directions:
-                    self.x_speed = self.base_x_speed * speed_multplier
+                    self.x_speed = (
+                        self.base_x_speed
+                        * speed_multplier
+                        * self.anomaly_speed_multiplier
+                    )
                     self.sprite.set_flipped(False)
                     self.last_movement = "right"
             else:
                 if "R" in self.allowed_directions:
                     self.last_movement = "left"
-                    self.x_speed = -self.base_x_speed * speed_multplier
+                    self.x_speed = (
+                        -self.base_x_speed
+                        * speed_multplier
+                        * self.anomaly_speed_multiplier
+                    )
                     if "R" in self.allowed_directions:
                         if self.platformer_rules:
                             self.sprite.set_flipped(True)
@@ -154,7 +183,14 @@ class Player(generics.GenericObject):
                 logging.debug("Player in the air")
                 return
             if "U" in self.allowed_directions:
-                self.y_speed = self.base_y_speed
+                if self.platformer_rules:
+                    self.y_speed = self.base_y_speed * self.jump_multiplier
+                else:
+                    self.y_speed = (
+                        self.base_y_speed
+                        * speed_multplier
+                        * self.anomaly_speed_multiplier
+                    )
                 self.last_movement = "up"
                 self.in_the_air = True
             else:
@@ -165,7 +201,11 @@ class Player(generics.GenericObject):
                 if self.in_the_air:
                     if not self.platformer_rules:
                         # This is a hack because we're still clipping through
-                        self.y_speed = -self.base_y_speed
+                        self.y_speed = (
+                            -self.base_y_speed
+                            * speed_multplier
+                            * self.anomaly_speed_multiplier
+                        )
                         self.last_movement = "down"
 
     def update_animation(self):
@@ -232,3 +272,28 @@ class Player(generics.GenericObject):
             if w.equipped and w.charging:
                 return True
         return False
+
+    def modify(self, items):
+        for item in items:
+            self._modify(item.name)
+
+    def _modify(self, item):
+        match item:
+            case "goggles":
+                if not self.health_bonus:
+                    self.MAX_HEALTH = 200
+                    self.health_bonus = True
+                    self.set_health(self.MAX_HEALTH)
+                    logging.info("Max health permanently set to 200")
+            case "magnet":
+                pass
+            case "boots":
+                if not self.speed_bonus:
+                    self.speed_multiplier = 2
+                    self.speed_bonus = True
+                    logging.info("Speed multiplier permanently increased")
+            case "noogler":
+                if not self.jump_bonus:
+                    self.jump_multiplier = 1.2
+                    self.jump_bonus = True
+                    logging.info("Jump multiplier permanently increased")

@@ -181,11 +181,25 @@ class Hackceler8(arcade.Window):
         self.gui_camera.use()
 
         if self.game is None:
+            arcade.start_render()
             self.main_menu_manager.draw()
             return
 
         self.camera.use()
         arcade.start_render()
+
+        if self.game.cheating_detected:
+            self.gui_camera.use()
+            arcade.draw_text(
+                "OUT OF SYNC, CHEATING DETECTED",
+                400,
+                600,
+                arcade.csscolor.ORANGE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
+            arcade.finish_render()
+            return
 
         self.draw_level()
 
@@ -227,31 +241,24 @@ class Hackceler8(arcade.Window):
 
         if self.game.won:
             arcade.draw_text(
-                "CONGRATULATIONS, YOU WIN!",
-                450,
+                "CONGRATULATIONS, YOU BEAT ALL %d CHALLENGES!"
+                % (len(self.game.global_match_items.items)),
+                300,
                 600,
-                arcade.csscolor.WHITE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
-            arcade.draw_text(
-                "TOTAL PLAY TIME: %s" % self.game.play_time_str(),
-                455,
-                550,
                 arcade.csscolor.WHITE,
                 18,
                 font_name=constants.FONT_NAME,
             )
 
-        if self.game.cheating_detected:
-            arcade.draw_text(
-                "OUT OF SYNC, CHEATING DETECTED",
-                400,
-                600,
-                arcade.csscolor.ORANGE,
-                18,
-                font_name=constants.FONT_NAME,
-            )
+        # if self.game.cheating_detected:
+        #     arcade.draw_text(
+        #         "OUT OF SYNC, CHEATING DETECTED",
+        #         400,
+        #         600,
+        #         arcade.csscolor.ORANGE,
+        #         18,
+        #         font_name=constants.FONT_NAME,
+        #     )
 
         if self.game.display_inventory:
             if (
@@ -295,12 +302,16 @@ class Hackceler8(arcade.Window):
                 continue
             o.draw()
 
+        if self.game.logic_engine is not None:
+            self.game.logic_engine.draw()
+
         if self.game.grenade_system:
             self.game.grenade_system.draw()
         self.game.combat_system.draw()
 
         if self.game.player is not None:
             self.game.player.draw()
+            # this draws the outline
 
         for o in self.game.objects:
             if not o.render_above_player:
@@ -672,8 +683,6 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.M:
-            logging.info("Showing menu")
-            self.show_menu()
             return
 
         if self.force_movement_keys:
