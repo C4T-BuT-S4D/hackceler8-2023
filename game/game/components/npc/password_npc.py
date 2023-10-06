@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from components import magic_items
 from engine import hitbox
-from engine.intepreters import check_one
 from engine.state import check_item_loaded
 
 from .npc import Npc
@@ -93,25 +91,3 @@ class SnakeNpc(PasswordNpc):
     @staticmethod
     def _password_correct(passwd):
         return passwd == "hunter1"
-
-
-class PythonNPC(PasswordNpc):
-    def __init__(self, coords, name, walk_data):
-        item = magic_items.Item(
-            coords=None, name="key_purple", display_name="Purple key", color="purple"
-        )
-        super().__init__(
-            "Python",
-            self._password_correct,
-            item,
-            "resources/NPCs/Snake_NPC_Green.tmx",
-            coords,
-            name,
-            walk_data,
-        )
-
-        self.solved = False
-
-    @staticmethod
-    def _password_correct(passwd):
-        return check_one(passwd)

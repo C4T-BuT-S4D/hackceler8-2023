@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 
 from engine import generics
 from engine import hitbox
@@ -25,7 +26,7 @@ class Npc(generics.GenericObject):
         )
         # Will be overwritten
         self.game = None
-        self.display_textbox = None
+        self.display_textbox = lambda _x: logging.fatal("Npc.display_textbox not set")
 
         self.walk_data = WalkData(self, walk_data)
         self.blocking = True

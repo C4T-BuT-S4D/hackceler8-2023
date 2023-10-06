@@ -28,6 +28,7 @@ class PhysicsEngine:
         self,
         gravity: int = GRAVITY_CONSTANT,
         platformer_rules: bool = True,
+        danmaku_rules: bool = False,
         objects: list[generics.GenericObject] = None,
         qt=None,
         obj_map=None,
@@ -64,6 +65,7 @@ class PhysicsEngine:
 
         self.qt = qt
         self.platformer_rules = self.player.platformer_rules = platformer_rules
+        self.player.danmaku_rules = danmaku_rules
         if self.platformer_rules:
             self.player.load_sprite(Player.PLATFORMER_TILESET)
             self.player.wear_item()
@@ -171,13 +173,15 @@ class PhysicsEngine:
                         "Ouch",
                         "Fire",
                         "Arena",
-                        "Brainduck",
                         "Portal",
                         "Spike",
                         "Switch",
                         "Soul",
                         "SpeedTile",
+                        "Coin",
+                        "Brainduck",
                         "Duck",
+                        "OneTimeFountain",
                     }
                     or o1.nametype == "LogicDoor"
                     and not o1.blocking
