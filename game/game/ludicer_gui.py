@@ -371,6 +371,10 @@ class Hackceler8(arcade.Window):
                     color = arcade.color.CADMIUM_GREEN
                 case "Fire":
                     color = arcade.color.ATOMIC_TANGERINE
+                case "Duck":
+                    color = arcade.color.YELLOW_ROSE
+                case "Brainduck":
+                    color = arcade.color.AMARANTH
                 case _:
                     print(f"skipped object {o.nametype}")
 
