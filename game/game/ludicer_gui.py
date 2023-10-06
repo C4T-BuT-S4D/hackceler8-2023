@@ -438,6 +438,15 @@ class Hackceler8(arcade.Window):
         added_keys = set()
         weapon_firing_enabled = self.num_weapon_shifts >= 0
 
+        # stop firing if the player or his weapons are gone (map switched, died, ended level)
+        if (
+            weapon_firing_enabled
+            and not self.game
+            or not self.game.player
+            or len(self.game.player.weapons) < 1
+        ):
+            self.num_weapon_shifts = -1
+
         # on correct weapon, shoot it if we can
         if (
             self.num_weapon_shifts == 0
