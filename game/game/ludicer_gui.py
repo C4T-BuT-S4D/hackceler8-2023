@@ -66,6 +66,7 @@ class Hackceler8(arcade.Window):
 
         self.num_weapon_shifts = -1
         self.auto_weapon_shooting = False
+        self.auto_danmaku_shooting = False
 
         self.draws = []
 
@@ -509,6 +510,9 @@ class Hackceler8(arcade.Window):
             ):
                 self.num_weapon_shifts = -1
 
+        if self.auto_danmaku_shooting:
+            added_keys.add(arcade.key.SPACE)
+
         # add temporary pressed keys for this single tick
         for key in added_keys:
             self.game.raw_pressed_keys.add(key)
@@ -703,6 +707,10 @@ class Hackceler8(arcade.Window):
         # if started dropping weapons or shooting manually, then cancel the switching
         if symbol == arcade.key.Q or symbol == arcade.key.SPACE:
             self.num_weapon_shifts = -1
+
+        # toggle shooting for danmaku
+        if self.game.danmaku_system and arcade.key.SPACE:
+            self.auto_danmaku_shooting = not self.auto_danmaku_shooting
 
         if (
             self.slow_ticks_mode
