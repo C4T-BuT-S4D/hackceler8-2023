@@ -762,6 +762,35 @@ class Hackceler8(arcade.Window):
 
             self.game.raw_pressed_keys = original_pressed_keys
 
+        if symbol == arcade.key.V:
+            # keys_to_press = json.load(open("brainduck-moves.json"))
+            # keys_to_press = list(b'+'*100 + b'[-]' + b'--[----->+<]>--..............................................+[--->+<]>....................................................................................................................................................................................................[->+++<]>-.......................................................................................................................................................--[--->+<]>---................................................................++[->+++<]>++..........................................................................................................--[--->+<]>--..........................................................................................................................................+++[->+++<]>++....................................................................................................--[--->+<]>---.....+++[->+++<]>++....--[--->+<]>---....+++[->+++<]>++...--[--->+<]>---............+++[->+++<]>++.....--[--->+<]>---................+++[->+++<]>++.....--[--->+<]>---.......................................+++[->+++<]>++......................................--[--->+<]>---..............................................................+++[->+++<]>++...........................................................................--[--->+<]>---..........................................................+++[->+++<]>++...............................................................................................+[--->+<]>.................................................................................................................................................................................................[->+++<]>-.')
+            keys = b"ddddddddddddddddddddddddddddddddddddddddddddddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaassssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddsssssddddssssdddssssssssssssdddddssssssssssssssssdddddsssssssssssssssssssssssssssssssssssssssddddddddddddddddddddddddddddddddddddddssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddssssssssssssssssssssssssssssssssssssssssssssssssssssssssssdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwd"
+            keys = [b"><.,"[b"wsda".index(c)] for c in keys]
+            cur_val = 0
+            prog = b""
+            for i in range(len(keys)):
+                if cur_val < keys[i]:
+                    prog += b"+" * (keys[i] - cur_val)
+                if cur_val > keys[i]:
+                    prog += b"-" * (cur_val - keys[i])
+                prog += b"."
+                cur_val = keys[i]
+
+            original_pressed_keys = self.game.raw_pressed_keys.copy()
+
+            for key in prog:
+                self.game.raw_pressed_keys = {b"wsda"[b"+-[]><.,".index(key) % 4]}
+                if key in b"+-[]":
+                    self.game.raw_pressed_keys.add(arcade.key.LSHIFT)
+                print(key, self.game.raw_pressed_keys)
+                # self.game.raw_pressed_keys = {key}
+                self.game.tick()
+                self.on_draw()
+                time.sleep(pyglet.clock.get_sleep_time(True))
+
+            self.game.raw_pressed_keys = original_pressed_keys
+
         if symbol == arcade.key.M:
             return
 
