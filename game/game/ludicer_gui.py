@@ -228,6 +228,16 @@ class Hackceler8(arcade.Window):
                 font_name=constants.FONT_NAME,
             )
 
+        if self.game.danmaku_system and self.game.danmaku_system.boss_health:
+            arcade.draw_text(
+                "BOSS HEALTH: %.02f" % self.game.danmaku_system.boss_health,
+                500,
+                10,
+                arcade.csscolor.BLUE,
+                18,
+                font_name=constants.FONT_NAME,
+            )
+
         if self.game.player.dead:
             arcade.draw_text(
                 "YOU DIED",
