@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .banker_npc import BankerNPC
+from .guessing_game_npc import GuessingGameNpc
 from .npc import BarkNpc
+from .password_npc import PythonNPC
 from .password_npc import SnakeNpc
-from .password_npc_yellow import PasswordNpcYellow
 
 NPC_TYPES = {
     "bark_npc": BarkNpc,
     "snake_npc": SnakeNpc,
-    "password_npc_yellow": PasswordNpcYellow,
+    "banker_npc": BankerNPC,
+    "python_npc": PythonNPC,
+    "guessing_game_npc": GuessingGameNpc,
 }

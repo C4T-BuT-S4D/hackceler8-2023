@@ -261,7 +261,7 @@ class Hitbox(Polygon):
         return round(self.get_highest_point() - self.get_lowest_point(), 2)
 
     def get_width(self):
-        return round(self.get_rightmost_point() - self.get_leftmost_point(), 2)
+        return self.get_rightmost_point() - self.get_leftmost_point()
 
     def get_rect(self):
         return Rectangle(

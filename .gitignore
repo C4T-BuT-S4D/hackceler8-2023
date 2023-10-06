@@ -5,3 +5,4 @@ __pycache__
 env/
 /game/game/cheats/static/*
 !/game/game/cheats/static/.keep
+/game/game/save_state

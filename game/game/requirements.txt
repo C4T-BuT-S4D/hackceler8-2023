@@ -8,3 +8,4 @@ flask
 flask-bootstrap
 flask-wtf
 Flask-AutoIndex
+js2py >= 0.74

@@ -194,7 +194,7 @@ impl PlayerState {
                     builtins
                         .getattr("round")
                         .unwrap()
-                        .call1((TICK_S * x, 5))
+                        .call1((TICK_S * x, 3))
                         .unwrap()
                         .extract()
                         .unwrap(),
@@ -206,7 +206,7 @@ impl PlayerState {
                     builtins
                         .getattr("round")
                         .unwrap()
-                        .call1((TICK_S * y, 5))
+                        .call1((TICK_S * y, 3))
                         .unwrap()
                         .extract()
                         .unwrap(),

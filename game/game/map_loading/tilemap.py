@@ -26,7 +26,9 @@ import xxhash
 from components import arena
 from components import boss
 from components import boss_gate
+from components import brainduck
 from components import door
+from components import duck
 from components import env_element
 from components import exitarea
 from components import fire
@@ -126,7 +128,7 @@ class BasicTileMap:
         logging.debug(self.map_size_pixels)
         logging.debug(f"Have a total of {len(self.objs)} objects")
 
-        logging.debug(f"Parsed map {self.map_file}")
+        logging.info(f"Parsed map {self.map_file} and {self.logic_map}")
 
         self.done = False
 
@@ -406,6 +408,16 @@ class BasicTileMap:
             logging.debug("parsing new exit area object")
             self.static_objs.append(exitarea.ExitArea(coords, o.size, o.name))
 
+        elif o.name == "Brainduck":
+            logging.debug(o)
+            logging.debug("parsing new Brainduck trigger")
+            self.static_objs.append(brainduck.Brainduck(coords, o.size, o.name))
+
+        elif "duck_" in o.name:
+            logging.debug(o)
+            logging.debug("parsing new Brainduck trigger")
+            self.static_objs.append(duck.Duck(coords, o.size, o.name))
+
         elif "portal" in o.name:
             logging.debug(o)
             logging.debug("parsing new portal object")
@@ -469,6 +481,9 @@ class BasicTileMap:
                 if not isinstance(l, logic.PassiveLogicComponent):
                     self.objs.append(l)
                 logging.debug(f"Added new logic object of type {l.nametype}")
+
+        else:
+            logging.debug("Unknown object {o.name}")
 
     def get_size(self):
         w = []
