@@ -377,7 +377,7 @@ class Hackceler8(arcade.Window):
                 case "Brainduck":
                     color = arcade.color.AMARANTH
                 case _:
-                    print(f"skipped object {o.nametype}")
+                    logging.debug(f"skipped object {o.nametype}")
 
             if color:
                 rect = o.get_rect()
@@ -398,10 +398,12 @@ class Hackceler8(arcade.Window):
                     )
 
                 if cheats_settings["draw_lines"]:
-                    if getattr(o, "color", None) is not None:
-                        line_color = getattr(arcade.color, o.color.upper(), None)
+                    if o.nametype == "Item":
+                        line_color = getattr(
+                            arcade.color, (o.color or "").upper(), None
+                        )
                         if line_color is None:
-                            logging.error(
+                            logging.debug(
                                 f"failed to get line color for item of color {o.color}, will use the default color"
                             )
                             line_color = color
@@ -711,7 +713,11 @@ class Hackceler8(arcade.Window):
         if symbol == arcade.key.AMPERSAND:
             original_pressed_keys = self.game.raw_pressed_keys.copy()
 
-            for map in self.game.arena_mapping.values():
+            for map in list(self.game.arena_mapping.values()) + ["base"]:
+                if map in ["boss", "danmaku"]:
+                    logging.info("Skipping render of boss map {map}")
+                    continue
+
                 logging.info(f"Switching to Map {map}")
                 self.game.switch_maps(map)
 
