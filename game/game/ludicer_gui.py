@@ -409,6 +409,16 @@ class Hackceler8(arcade.Window):
                             color=line_color,
                             line_width=2,
                         )
+
+                    if o.nametype == "Portal":
+                        arcade.draw_line(
+                            start_x=o.x,
+                            start_y=o.y,
+                            end_x=o.dest.x,
+                            end_y=o.dest.y,
+                            color=arcade.color.PURPLE,
+                            line_width=2,
+                        )
                     # render lines to something else as well
 
     def render_map(self):
