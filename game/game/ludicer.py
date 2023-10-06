@@ -763,6 +763,10 @@ class Ludicer:
 
     def init_random(self):
         if not self.is_server:
+            self.rand_seed = 1339
+            self.rng_system.seed(self.rand_seed)
+            return
+
             if self.rand_seed is None:
                 self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
                 self.rng_system.seed(self.rand_seed)
