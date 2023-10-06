@@ -32,6 +32,15 @@ def main():
         default="../ca/dev-team",
         help="Path to client cert (without .key/.crt suffix)",
     )
+    parser.add_argument(
+        "--ca", default="../ca/CA-devel.crt", help="Path to CA .crt file"
+    )
+    parser.add_argument(
+        "--standalone",
+        action="store_true",
+        default=False,
+        help="Run locally (without connecting to a dedicated server)",
+    )
 
     args = parser.parse_args()
     log.setup_logging(args, file_prefix="client")
@@ -39,11 +48,20 @@ def main():
     logging.getLogger("arcade").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)
 
-    net = network.NetworkConnection.create_client(
-        args.hostname,
-        args.port,
-        args.cert,
-    )
+    net = None
+    if not args.standalone:
+        net = network.NetworkConnection.create_client(
+            args.hostname,
+            args.port,
+            args.cert,
+            ca=args.ca,
+        )
+
+        if net is None:
+            logging.fatal(
+                "Connecting to server failed, pass --standalone if you want to run the game without a server."
+            )
+            raise SystemExit()
 
     window = ludicer_gui.Hackceler8(net)
     window.run()

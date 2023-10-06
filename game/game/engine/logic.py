@@ -13,6 +13,10 @@
 # limitations under the License.
 
 
+import arcade
+
+from components.logic import PassiveLogicComponent
+
 LOGIC_INTERVAL = 5
 
 
@@ -20,6 +24,11 @@ class LogicEngine:
     def __init__(self, logic_map):
         self.logic_map = logic_map
         self.logic_countdown = 0
+        self.spritelist = arcade.SpriteList(lazy=True)
+        for logic_id in self.logic_map:
+            obj = self.logic_map[logic_id]
+            if isinstance(obj, PassiveLogicComponent):
+                self.spritelist.append(obj.sprite)
 
     def update_logic(self):
         outputs = {}
@@ -34,3 +43,6 @@ class LogicEngine:
             self.update_logic()
             self.logic_countdown = LOGIC_INTERVAL
         self.logic_countdown -= 1
+
+    def draw(self):
+        self.spritelist.draw()

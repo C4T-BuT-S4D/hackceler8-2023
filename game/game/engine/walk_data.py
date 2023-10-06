@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-
 import constants
 
 
@@ -25,6 +23,7 @@ class WalkData:
         self.data = []
         self.det_data = []
         self.walk_progress = 0
+        self.rng = None
         if len(data_str) == 0:
             return
 
@@ -40,11 +39,13 @@ class WalkData:
 
     def reset(self):
         self.walk_progress = 0
-        self._init_det_data()
+        self.det_data = []
 
-    def walk(self):
+    def walk(self, game):
         if len(self.data) == 0:
             return None
+        if self.rng is None:
+            self.rng = game.rng_system.get("prng")
         if len(self.det_data) == 0:
             self._init_det_data()
         # Walk around: First find the current walk step
@@ -84,7 +85,7 @@ class WalkData:
                 self.det_data.append(walk_step)
             elif walk_step[0] == "R":  # Random direction
                 self.det_data.append(
-                    (random.choice(["N", "E", "S", "W"]), walk_step[1])
+                    (self.rng.choice(["N", "E", "S", "W"]), walk_step[1])
                 )
             else:
                 self.det_data.append(walk_step)

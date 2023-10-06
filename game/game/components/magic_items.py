@@ -11,14 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import logging
+import time
 from os.path import exists
 
-import dill
 import pytiled_parser
 
 from engine import generics
 from engine import hitbox
+
+ITEMS = [
+    # Keys to the boss arena
+    "key_violet",
+    "key_blue",
+    "key_purple",
+    "key_orange",
+    # Extra items
+    "magnet",
+    "noogler",
+    "goggles",
+    "boots",
+    "chest",
+    # Generic flag item supports verbose flags
+    "flag",
+    # Boss flags
+    "flag_llm",
+    "flag_danmaku",
+]
 
 
 def _get_tileset(name):
@@ -30,6 +49,9 @@ def _get_tileset(name):
 
 class Item(generics.GenericObject):
     def __init__(self, coords, name, display_name, color=None, wearable=False):
+        if name not in ITEMS:
+            logging.critical(f"Untracked item: {name}")
+
         if coords is None:  # Placeholder values for items not on the map.
             coords = pytiled_parser.OrderedPair(0, 0)
         self.perimeter = [
@@ -68,16 +90,16 @@ class Item(generics.GenericObject):
                 self.collectable = False
 
     def _dump(self):
-        return dill.dumps(
-            [
-                self.nametype,
-                self.name,
-                self.display_name,
-                self.color,
-                self.wearable,
-                str(self.collected_time),
-            ]
-        )
+        # return dill.dumps([self.nametype, self.name, self.display_name, self.color,
+        #                    self.wearable, str(
+        #         self.collected_time)])
+        return {
+            "name": self.name,
+            "display_name": self.display_name,
+            "color": self.color,
+            "wearable": self.wearable,
+            "collected_time": self.collected_time,
+        }
 
     def is_identical(self, item_compared):
         return all(
@@ -90,7 +112,36 @@ class Item(generics.GenericObject):
         )
 
 
-def load_from_save(name, display_name, color, wearable, collected_time):
+def load_item_from_save(name, display_name, color, wearable, collected_time):
     it = Item(None, name, display_name, color, wearable)
-    it.collected_time = collected_time
+    it.collected_time = float(collected_time)
     return it
+
+
+class ItemCollection:
+    def __init__(self, items: list[Item]):
+        self.items = items
+
+    def verify(self):
+        tr = []
+        for i in self.items:
+            if i.name not in tr:
+                tr.append(i.name)
+            else:
+                return False
+        return True
+
+    def __getitem__(self, item):
+        for i in self.items:
+            if i.name == item:
+                return i
+        logging.critical(f"Untracked item: {item.name}")
+
+    def mark_collected(self, item_name):
+        self[item_name].collected_time = time.time()
+
+    def dump(self):
+        return [i.dump() for i in self.items]
+
+    def won_all(self):
+        return all([i.collected_time > 0 for i in self.items])
