@@ -59,12 +59,12 @@ class GuessingGameNpc(Npc):
 
     def _game(self):
         lo = 11
-        hi = 14
+        hi = 13
         text = (
             "Alright! It's a number guessing game.\nWhich number am I thinking of? It's between %d and %d"
             % (lo, hi)
         )
-        choices = [str(n) for n in range(lo, hi + 1)]
+        choices = [str(n) for n in range(lo, hi + 1)] + ["1337"]
 
         def resp_process(resp: str):
             num = "1337"
