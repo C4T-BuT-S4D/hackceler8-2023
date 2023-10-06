@@ -146,8 +146,6 @@ class Ludicer:
         self.state_hash = None
         self.cheating_detected = False
 
-        self.force_textbox = None
-
         self.level_modifier = None
 
         self.inventory = Inventory(self, is_server=self.is_server)
@@ -562,10 +560,6 @@ class Ludicer:
                 "Called get_text_input on server, should only be used on client"
             )
             return
-
-        if self.force_textbox:
-            return self.force_textbox
-
         if self.textbox is None or not self.textbox.text_input_appeared:
             return None
         return self.textbox.text_input.text

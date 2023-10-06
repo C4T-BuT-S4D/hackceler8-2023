@@ -659,13 +659,6 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if symbol == arcade.key.O and modifiers & arcade.key.MOD_CTRL:
-            if self.game.force_textbox:
-                self.game.force_textbox = None
-            else:
-                self.game.force_textbox = "1337"
-            return
-
         if symbol == arcade.key.EQUAL:
             self.slow_ticks_mode = not self.slow_ticks_mode
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
