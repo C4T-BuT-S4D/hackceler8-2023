@@ -19,6 +19,7 @@ import uuid
 
 import arcade
 import cheats_rust
+import pyglet
 from arcade import gui
 from PIL import Image
 from pyglet.image import load as pyglet_load
@@ -59,8 +60,11 @@ class Hackceler8(arcade.Window):
         self.main_menu_manager = gui.UIManager()
         self.main_menu_manager.enable()
 
-        self.force_next_keys = []
-        self.force_next_keys_per_frame = 1
+        self.force_movement_keys = []
+        self.force_movement_keys_per_frame = 1
+
+        self.num_weapon_shifts = -1
+        self.auto_weapon_shooting = False
 
         self.draws = []
 
@@ -75,9 +79,6 @@ class Hackceler8(arcade.Window):
 
         self._setup()
         self.show_menu()
-
-        self.force_next_keys = []
-        self.force_next_keys_per_frame = 1
 
         self.slow_ticks_mode = False
 
@@ -422,7 +423,67 @@ class Hackceler8(arcade.Window):
                 )
             )
 
-    def tick_game(self):
+    def tick_game_with_shooting(self):
+        added_keys = set()
+        weapon_firing_enabled = self.num_weapon_shifts >= 0
+
+        # on correct weapon, shoot it if we can
+        if (
+            self.num_weapon_shifts == 0
+            and self.game.player.weapons[0].cool_down_timer == 0
+            and (arcade.key.SPACE not in self.game.prev_pressed_keys)
+        ):
+            added_keys.add(arcade.key.SPACE)
+            self.num_weapon_shifts = -1
+
+        # planning to shoot some weapon but didn't reach it yet
+        if self.num_weapon_shifts > 0:
+            skip_shift = (
+                arcade.key.Q in self.game.prev_pressed_keys
+                or arcade.key.SPACE in self.game.prev_pressed_keys
+            )
+
+            if not skip_shift:
+                # drop current weapon, will select next one
+                added_keys.add(arcade.key.Q)
+                # next weapon selected, one less to shift through
+                self.num_weapon_shifts -= 1
+                # pick up dropped weapon, will be placed at the end
+                added_keys.add(arcade.key.SPACE)
+
+            # just shifted to the correct weapon and it's cooldown is 0, it will fire immediately
+            if (
+                self.num_weapon_shifts == 0
+                and self.game.player.weapons[0].cool_down_timer == 0
+            ):
+                self.num_weapon_shifts = -1
+
+        # add temporary pressed keys for this single tick
+        for key in added_keys:
+            self.game.raw_pressed_keys.add(key)
+
+        self.game.tick()
+
+        for key in added_keys:
+            self.game.raw_pressed_keys.remove(key)
+
+        # check auto weapon shooting after ticking because something might've broken already,
+        # e.g. user might've thrown all the weapons out
+        if self.auto_weapon_shooting and not (
+            self.game is not None
+            and self.game.player is not None
+            and len(self.game.player.weapons) > 0
+        ):
+            self.auto_weapon_shooting = False
+
+        # try to find the next weapon to shoot if shooting is enabled
+        if weapon_firing_enabled and self.auto_weapon_shooting:
+            min_index = self.closest_shootable_weapon()
+            if min_index >= 0:
+                self.num_weapon_shifts = min_index
+
+    def tick_game_with_movement_and_shooting(self):
+        settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
             shift = True
@@ -449,14 +510,15 @@ class Hackceler8(arcade.Window):
         elif keys == set():
             move = cheats_rust.Move.NONE
         else:
-            self.game.tick()
+            self.tick_game_with_shooting()
             return
 
-        self.game.tick()
+        if get_settings()["validate_transitions"]:
+            expected = cheats_rust.get_transition(static_state, state, move, shift)
+
+        self.tick_game_with_shooting()
 
         if get_settings()["validate_transitions"]:
-            settings, state, static_state = self.to_rust_state()
-            expected = cheats_rust.get_transition(static_state, state, move, shift)
             attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
             vals = [
                 (getattr(self.game.player, k1), getattr(expected, k2))
@@ -479,18 +541,79 @@ class Hackceler8(arcade.Window):
         if self.slow_ticks_mode:
             return
 
-        if self.force_next_keys:
-            for keys, state in self.force_next_keys[: self.force_next_keys_per_frame]:
+        if self.force_movement_keys:
+            for keys, state in self.force_movement_keys[
+                : self.force_movement_keys_per_frame
+            ]:
                 self.game.raw_pressed_keys = keys
-                self.tick_game()
-            self.force_next_keys = self.force_next_keys[
-                self.force_next_keys_per_frame :
+                self.tick_game_with_movement_and_shooting()
+
+            self.force_movement_keys = self.force_movement_keys[
+                self.force_movement_keys_per_frame :
             ]
             self.game.raw_pressed_keys = set()
         else:
-            self.tick_game()
+            self.tick_game_with_movement_and_shooting()
 
         self.center_camera_to_player()
+
+    def closest_shootable_weapon(self) -> int:
+        skip_first_switch = (
+            arcade.key.Q in self.game.prev_pressed_keys
+            or arcade.key.SPACE in self.game.prev_pressed_keys
+        )
+
+        weapons = self.game.player.weapons
+
+        if not weapons[0].equipped and not self.select_first_weapon():
+            return -1
+
+        min_tics = self.game.player.weapons[0].cool_down_timer
+        min_index = 0
+
+        for index in range(1, len(weapons)):
+            weapon = weapons[index]
+
+            switch_time = skip_first_switch + index * 2 - 1
+            wait_time = max(0, weapon.cool_down_timer - switch_time)
+            tics = switch_time + wait_time
+
+            if tics < min_tics:
+                min_tics = tics
+                min_index = index
+
+        return min_index
+
+    def select_first_weapon(self) -> bool:
+        original_pressed_keys = self.game.raw_pressed_keys.copy()
+
+        weapons = self.game.player.weapons
+        equipped_index = -1
+        for i, weapon in enumerate(weapons):
+            if weapon.equipped:
+                equipped_index = i
+                break
+
+        if equipped_index == -1:
+            logging.error(
+                "couldn't find equipped weapon despite user having >0 weapons"
+            )
+            return False
+
+        self.game.raw_pressed_keys = {arcade.key.P}
+        self.game.tick()
+        time.sleep(pyglet.clock.get_sleep_time(True))
+
+        for i in range(equipped_index):
+            self.game.raw_pressed_keys = {arcade.key.W}
+            self.game.tick()
+            time.sleep(pyglet.clock.get_sleep_time(True))
+
+        self.game.raw_pressed_keys = {arcade.key.P}
+        self.game.tick()
+        time.sleep(pyglet.clock.get_sleep_time(True))
+
+        self.game.raw_pressed_keys = original_pressed_keys
 
     def on_key_press(self, symbol: int, modifiers: int):
         if self.game is None:
@@ -505,6 +628,33 @@ class Hackceler8(arcade.Window):
             self.slow_ticks_mode = False
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
+
+        # enable automatic shooting which will always select the next
+        # weapon to shoot once we've shot the current one
+        if symbol == arcade.key.BRACKETRIGHT or symbol == arcade.key.BRACERIGHT:
+            self.auto_weapon_shooting = not self.auto_weapon_shooting
+
+        # disable automatic shooting when using semi-automatic one
+        semiauto_weapon_shooting = (
+            symbol == arcade.key.BRACKETLEFT or symbol == arcade.key.BRACELEFT
+        )
+        if semiauto_weapon_shooting:
+            self.auto_weapon_shooting = False
+
+        if (
+            (semiauto_weapon_shooting or self.auto_weapon_shooting)
+            and self.game is not None
+            and self.game.player is not None
+            and len(self.game.player.weapons) > 0
+        ):
+            # find the closest shootable gun and label it in order to try switching to it
+            min_index = self.closest_shootable_weapon()
+            if min_index >= 0:
+                self.num_weapon_shifts = min_index
+
+        # if started dropping weapons or shooting manually, then cancel the switching
+        if symbol == arcade.key.Q or symbol == arcade.key.SPACE:
+            self.num_weapon_shifts = -1
 
         if (
             self.slow_ticks_mode
@@ -526,8 +676,8 @@ class Hackceler8(arcade.Window):
             self.show_menu()
             return
 
-        if self.force_next_keys:
-            self.force_next_keys = []
+        if self.force_movement_keys:
+            self.force_movement_keys = []
 
         self.game.raw_pressed_keys.add(symbol)
 
@@ -703,7 +853,7 @@ class Hackceler8(arcade.Window):
             if not path:
                 print("Path not found")
             else:
-                self.force_next_keys = []
+                self.force_movement_keys = []
                 for move, shift, state in path:
                     match move:
                         case cheats_rust.Move.W:
@@ -731,6 +881,6 @@ class Hackceler8(arcade.Window):
                     if shift:
                         moves.add(arcade.key.LSHIFT)
 
-                    self.force_next_keys.append((moves, state))
+                    self.force_movement_keys.append((moves, state))
 
                 print("path found", [x[:2] for x in path])
