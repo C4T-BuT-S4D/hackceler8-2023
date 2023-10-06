@@ -525,7 +525,7 @@ class Hackceler8(arcade.Window):
             return
 
         if get_settings()["validate_transitions"]:
-            expected = cheats_rust.get_transition(static_state, state, move, shift)
+            expected = cheats_rust.get_transition(settings, static_state, state, move, shift)
 
         self.tick_game_with_shooting()
 

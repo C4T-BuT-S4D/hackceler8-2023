@@ -161,7 +161,7 @@ pub fn astar_search(
                             }
 
                             let mut neighbor_state = *state;
-                            neighbor_state.tick(next_move, shift_pressed, &static_state);
+                            neighbor_state.tick(next_move, shift_pressed, &static_state, &settings);
 
                             if neighbor_state.player.dead {
                                 continue;
