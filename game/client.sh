@@ -7,7 +7,7 @@ python3 -m pip install -r game/requirements.txt
 
 cd ../cheats-rust
 maturin build --profile opt -i "$(which python3)"
-pip install target/wheels/*
+pip install --force-reinstall target/wheels/*
 cd ../game
 
 if [ "$1" = "local" ]; then
