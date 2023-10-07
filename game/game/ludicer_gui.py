@@ -642,7 +642,12 @@ class Hackceler8(arcade.Window):
         if self.slow_ticks_mode:
             return
 
+        saved_map = self.game.current_map
         self.tick_game_with_movement_and_shooting()
+        if self.recording_enabled and self.game.current_map != saved_map:
+            self.save_recording(current_map=saved_map)
+            self.stop_recording()
+
         self.center_camera_to_player()
 
     def closest_shootable_weapon(self) -> int:
@@ -718,13 +723,12 @@ class Hackceler8(arcade.Window):
 
         if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
             if self.recording_enabled:
-                self.recording_enabled = False
-                self.reset_recording()
+                self.stop_recording()
                 return
 
             self.recording_enabled = True
             self.last_save = time.time()
-            self.game.current_recording = []
+            self.reset_recording()
             self.ticks_to_apply = [
                 TickData(
                     keys=[arcade.key.R],
@@ -1104,8 +1108,11 @@ class Hackceler8(arcade.Window):
 
                 print("path found", [x[:2] for x in path])
 
-    def save_recording(self):
-        filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
+    def save_recording(self, current_map=None):
+        if current_map is None:
+            current_map = self.game.current_map
+
+        filename = f"{current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
         path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
         with open(path, "w") as f:
             json.dump(self.game.current_recording, f, indent=2)
@@ -1130,3 +1137,7 @@ class Hackceler8(arcade.Window):
 
     def reset_recording(self):
         self.game.current_recording = []
+
+    def stop_recording(self):
+        self.recording_enabled = False
+        self.reset_recording()
