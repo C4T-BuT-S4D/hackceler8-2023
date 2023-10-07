@@ -14,10 +14,10 @@ from wtforms import TextAreaField
 class MacrosSettings(Form):
     title = "Macros"
 
-    keys_to_press = TextAreaField(
+    macros = TextAreaField(
         default="",
-        label="Keys to press",
-        description="Keys to press in JSON format",
+        label="Macros",
+        description="Array of up to 9 macros",
     )
 
     cancel_macro_on_key_press = BooleanField(
