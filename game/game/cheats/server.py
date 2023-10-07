@@ -97,7 +97,11 @@ def run_cheats_server(port: int) -> threading.Thread:
             map_recordings = sorted(map_recordings)
 
         chosen_recording = request.args.get("recording")
-        if chosen_recording is None and len(map_recordings) > 0:
+        if (
+            chosen_recording is None
+            and map_recordings is not None
+            and len(map_recordings) > 0
+        ):
             chosen_recording = map_recordings[0]
 
         screenshot_name = None
