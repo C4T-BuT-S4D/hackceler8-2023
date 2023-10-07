@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
+import datetime
 import json
 import logging
 import os
@@ -19,8 +21,6 @@ import shutil
 import time
 import traceback
 import uuid
-import ast
-import datetime
 
 import arcade
 import cheats_rust
@@ -31,9 +31,9 @@ from PIL import Image
 from pyglet.image import load as pyglet_load
 
 import cheats.lib.geom as cheats_geom
-from cheats.lib.tick_data import TickData
 import constants
 import ludicer
+from cheats.lib.tick_data import TickData
 from cheats.maps import render_finish
 from cheats.maps import render_requested
 from cheats.settings import get_settings

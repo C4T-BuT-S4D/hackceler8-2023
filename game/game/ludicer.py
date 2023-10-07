@@ -26,6 +26,7 @@ import numpy as np
 import xxhash
 
 import constants
+from cheats.settings import get_settings
 from components import textbox
 from components.enemy.enemy import Enemy
 from components.inventory import Inventory
@@ -46,7 +47,6 @@ from engine.state import SaveFile
 from engine.state import check_item_loaded
 from map_loading import maps
 from map_loading.maps import GameMode
-from cheats.settings import get_settings
 
 
 class MagicItem(Enum):
