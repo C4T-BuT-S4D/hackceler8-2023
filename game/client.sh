@@ -33,9 +33,9 @@ else
 fi
 
 if [ "$2" = "plain" ]; then
-  export GAME_SSL="t"
-elif [ "$2" = "ssl" ]; then
   export GAME_SSL="f"
+elif [ "$2" = "ssl" ]; then
+  export GAME_SSL="t"
 else
   echo "Specify plain/ssl as second argument"
   exit 1
