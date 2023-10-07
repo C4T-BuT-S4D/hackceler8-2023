@@ -125,11 +125,11 @@ impl PlayerState {
 
 impl PlayerState {
     pub fn half_height(&self) -> f64 {
-        ((self.hy_max - self.hy_min) / 2.0).floor()
+        16.0
     }
 
     pub fn half_width(&self) -> f64 {
-        ((self.hx_max - self.hx_min) / 2.0).floor()
+        16.0
     }
 }
 
@@ -194,7 +194,7 @@ impl PlayerState {
                     builtins
                         .getattr("round")
                         .unwrap()
-                        .call1((TICK_S * x, 15))
+                        .call1((TICK_S * x, 5))
                         .unwrap()
                         .extract()
                         .unwrap(),
@@ -206,7 +206,7 @@ impl PlayerState {
                     builtins
                         .getattr("round")
                         .unwrap()
-                        .call1((TICK_S * y, 15))
+                        .call1((TICK_S * y, 5))
                         .unwrap()
                         .extract()
                         .unwrap(),
@@ -586,27 +586,27 @@ impl PartialEq for PhysState {
             }
         }
 
-        if self.settings.simple_geometry {
-            if self.player.half_height().to_le_bytes() != other.player.half_height().to_le_bytes() {
-                return false;
-            }
-            if self.player.half_width().to_le_bytes() != other.player.half_width().to_le_bytes() {
-                return false;
-            }
-        } else {
-            if self.player.hx_min != other.player.hx_min {
-                return false;
-            }
-            if self.player.hx_max != other.player.hx_max {
-                return false;
-            }
-            if self.player.hy_min != other.player.hy_min {
-                return false;
-            }
-            if self.player.hy_max != other.player.hy_max {
-                return false;
-            }
-        }
+        // if self.settings.simple_geometry {
+        //     if self.player.half_height().to_le_bytes() != other.player.half_height().to_le_bytes() {
+        //         return false;
+        //     }
+        //     if self.player.half_width().to_le_bytes() != other.player.half_width().to_le_bytes() {
+        //         return false;
+        //     }
+        // } else {
+        //     if self.player.hx_min != other.player.hx_min {
+        //         return false;
+        //     }
+        //     if self.player.hx_max != other.player.hx_max {
+        //         return false;
+        //     }
+        //     if self.player.hy_min != other.player.hy_min {
+        //         return false;
+        //     }
+        //     if self.player.hy_max != other.player.hy_max {
+        //         return false;
+        //     }
+        // }
 
         if self.settings.enable_vpush {
             if self.player.vpush != other.player.vpush {
@@ -648,15 +648,15 @@ impl Hash for PhysState {
             state.write(&self.player.y.to_le_bytes());
         }
 
-        if self.settings.simple_geometry {
-            self.player.half_height().to_le_bytes().hash(state);
-            self.player.half_width().to_le_bytes().hash(state);
-        } else {
-            state.write(&self.player.hx_min.to_le_bytes());
-            state.write(&self.player.hx_max.to_le_bytes());
-            state.write(&self.player.hy_min.to_le_bytes());
-            state.write(&self.player.hy_max.to_le_bytes());
-        }
+        // if self.settings.simple_geometry {
+        //     self.player.half_height().to_le_bytes().hash(state);
+        //     self.player.half_width().to_le_bytes().hash(state);
+        // } else {
+        //     state.write(&self.player.hx_min.to_le_bytes());
+        //     state.write(&self.player.hx_max.to_le_bytes());
+        //     state.write(&self.player.hy_min.to_le_bytes());
+        //     state.write(&self.player.hy_max.to_le_bytes());
+        // }
 
         if self.settings.enable_vpush {
             state.write(&self.player.vpush.to_le_bytes());
