@@ -70,12 +70,6 @@ class Inventory:
             self.v_box_weapons.add(self._button(text))
 
         # Display items
-        if self.game.coin_collection is None:
-            coin_count = 0
-        else:
-            coin_count = len(
-                [c for c in self.game.coin_collection.coins if c.collected]
-            )
         if len(self._wearable_items()) <= 1:
             self.v_box_items.add(self._text_area("ITEMS", width=80, height=20))
         else:
@@ -83,7 +77,7 @@ class Inventory:
                 self._text_area("  ITEMS\n(SWITCH: R/F)", width=176, height=40)
             )
 
-        if len(self.game.items) + coin_count == 0:
+        if len(self.game.items) == 0:
             self.v_box_items.add(self._text_area("* NONE *", width=120, height=20))
 
         for i in self.game.items:
@@ -91,9 +85,6 @@ class Inventory:
             if i.worn:
                 text = "* " + text + " *"
             self.v_box_items.add(self._button(text))
-
-        if coin_count > 0:
-            self.v_box_items.add(self._button(f"Coin x{coin_count}"))
 
         self.h_box.add(self.v_box_weapons.with_space_around(right=100))
         self.h_box.add(self.v_box_items)
