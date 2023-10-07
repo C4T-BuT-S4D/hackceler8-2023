@@ -205,6 +205,10 @@ class Ludicer:
 
         self.setup()
 
+        # cheat sh[ee]it.
+        self.current_recording = []
+
+
     @property
     def won(self):
         # Game is won if the time is neither None nor 0

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import shutil
@@ -82,6 +83,11 @@ class Hackceler8(arcade.Window):
         self.show_menu()
 
         self.slow_ticks_mode = False
+
+        self.last_save = 0
+        self.recording_enabled = False
+
+        logging.info("Using audio driver {}".format(pyglet.media.get_audio_driver()))
 
     def show_menu(self):
         self.main_menu_manager.enable()
@@ -590,6 +596,17 @@ class Hackceler8(arcade.Window):
         if render_requested():
             self.render_map()
             render_finish()
+
+        if (
+            self.recording_enabled
+            and time.time() - self.last_save
+            and self.game.current_recording
+        ):
+            with open("recording.json", "w") as f:
+                f.write(json.dumps(self.current_recording))
+
+            self.last_save = time.time()
+            self.game.current_recording = []
 
         if self.slow_ticks_mode:
             return
