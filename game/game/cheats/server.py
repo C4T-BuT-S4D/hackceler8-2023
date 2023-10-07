@@ -2,12 +2,14 @@ import logging
 import os
 import threading
 from copy import deepcopy
+from collections import defaultdict
 
 from flask import Flask
 from flask import redirect
 from flask import render_template
 from flask import request
 from flask import send_file
+from flask import send_from_directory
 from flask import url_for
 from flask_autoindex import AutoIndex
 
@@ -28,8 +30,14 @@ def run_cheats_server(port: int) -> threading.Thread:
 
     @app.get("/static")
     @app.get("/static/<path:path>")
-    def autoindex(path="."):
+    def static_autoindex(path="."):
         return static_index.render_autoindex(path)
+
+    @app.get("/recordings/<path:path>")
+    def recordings_autoindex(path="."):
+        return send_from_directory(
+            os.path.join(os.path.dirname(__file__), "recordings"), path
+        )
 
     @app.route("/", methods=["GET", "POST"])
     def index():
@@ -53,6 +61,57 @@ def run_cheats_server(port: int) -> threading.Thread:
             return redirect(url_for("index"))
 
         return render_template("index.html", forms=forms)
+
+    @app.route("/recordings", methods=["GET", "POST"])
+    def recordings():
+        if request.method == "POST":
+            chosen_recording = request.args.get("recording")
+            update_settings(lambda s: s.update(recording_filename=chosen_recording))
+
+            logging.info(f"Set chosen recording to {chosen_recording}")
+            return redirect(url_for("recordings", **request.args))
+
+        all_recordings = os.listdir(
+            os.path.join(os.path.dirname(__file__), "recordings")
+        )
+
+        recordings_by_map = defaultdict(list)
+        for recording in all_recordings:
+            if recording.count("_") < 1:
+                continue
+            if not recording.endswith(".json"):
+                continue
+
+            recordings_by_map[recording.split("_", 1)[0]].append(recording)
+
+        map_names = sorted(recordings_by_map.keys())
+
+        chosen_map = request.args.get("map")
+        if chosen_map is None and len(map_names) > 0:
+            chosen_map = map_names[0]
+
+        map_recordings = None
+        if chosen_map is not None:
+            map_recordings = recordings_by_map.get(chosen_map)
+        if map_recordings is not None:
+            map_recordings = sorted(map_recordings)
+
+        chosen_recording = request.args.get("recording")
+        if chosen_recording is None and len(map_recordings) > 0:
+            chosen_recording = map_recordings[0]
+
+        screenshot_name = None
+        if chosen_recording is not None:
+            screenshot_name = chosen_recording.removesuffix(".json") + ".png"
+
+        return render_template(
+            "recordings.html",
+            maps=map_names,
+            chosen_map=chosen_map,
+            map_recordings=map_recordings,
+            chosen_recording=chosen_recording,
+            screenshot_src=f"/recordings/{screenshot_name}",
+        )
 
     @app.get("/map")
     def map():

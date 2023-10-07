@@ -126,7 +126,7 @@ class PathfindingSettings(Form):
 settings_forms = [MacrosSettings, RenderingAndExtraSettings, PathfindingSettings]
 
 __lock: RLock = RLock()
-__settings: dict = dict()
+__settings: dict = {"recording_filename": None}
 
 
 def init_settings():

@@ -38,6 +38,7 @@ from cheats.lib.tick_data import TickData
 from cheats.maps import render_finish
 from cheats.maps import render_requested
 from cheats.settings import get_settings
+from cheats.settings import update_settings
 from map_loading.maps import GameMode
 
 SCREEN_TITLE = "Hackceler8-23"
@@ -810,7 +811,7 @@ class Hackceler8(arcade.Window):
                         )
                     )
             except Exception as e:
-                print(f"bad macros: {macros}: {e}\n{traceback.format_exc()}")
+                logging.error(f"bad macros: {macros}: {e}\n{traceback.format_exc()}")
             finally:
                 return
 
@@ -1127,7 +1128,9 @@ class Hackceler8(arcade.Window):
         )
         os.makedirs(recordings_dir, exist_ok=True)
 
-        savename = f"{self.game.current_map}_{datetime.datetime.now().isoformat()}_{self.game.tics:05}"
+        savename = (
+            f"{current_map}_{datetime.datetime.now().isoformat()}_{self.game.tics:05}"
+        )
         if suffix:
             savename += f"_{suffix}"
 
@@ -1146,11 +1149,20 @@ class Hackceler8(arcade.Window):
         self.last_save = time.time()
 
     def load_recording(self):
-        # filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
-        filename = "cctv-2023-10-07T20:07:19.897857-03350.json"
+        filename = get_settings()["recording_filename"]
+        if filename is None:
+            logging.warn("No recording chosen")
+            return
+
+        update_settings(lambda s: s.update(recording_filename=None))
         path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
-        with open(path, "r") as f:
-            data = json.load(f)
+
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            logging.error(f"failed to load recording: {e}\n{traceback.format_exc()}")
+            return
 
         self.ticks_to_apply = [
             TickData(
