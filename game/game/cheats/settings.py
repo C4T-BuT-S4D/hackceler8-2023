@@ -21,7 +21,7 @@ class MacrosSettings(Form):
     )
 
     cancel_macro_on_key_press = BooleanField(
-        default=False,
+        default=True,
         label="Cancel macros on keypress",
     )
 
@@ -36,7 +36,7 @@ class RenderingAndExtraSettings(Form):
     )
 
     draw_names = BooleanField(
-        default=True,
+        default=False,
         label="Draw object names",
     )
 

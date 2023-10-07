@@ -1,8 +1,8 @@
 import logging
 import os
 import threading
-from copy import deepcopy
 from collections import defaultdict
+from copy import deepcopy
 
 from flask import Flask
 from flask import redirect
