@@ -18,8 +18,8 @@ import logging
 import log
 import ludicer_gui
 import network
-from cheats.settings import init_settings
 from cheats.server import run_cheats_server
+from cheats.settings import init_settings
 
 
 def main():

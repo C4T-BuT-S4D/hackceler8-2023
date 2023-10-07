@@ -1,6 +1,6 @@
+import logging
 import os
 import threading
-import logging
 from copy import deepcopy
 
 from flask import Flask
@@ -12,8 +12,8 @@ from flask import url_for
 from flask_autoindex import AutoIndex
 
 from cheats.maps import request_render
-from cheats.settings import settings_forms
 from cheats.settings import get_settings
+from cheats.settings import settings_forms
 from cheats.settings import update_settings
 
 

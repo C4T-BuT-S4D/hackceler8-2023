@@ -3,9 +3,9 @@ from copy import deepcopy
 from threading import RLock
 from typing import Callable
 
-from wtforms import Form
 from wtforms import BooleanField
 from wtforms import FloatField
+from wtforms import Form
 from wtforms import IntegerField
 from wtforms import StringField
 from wtforms import TextAreaField
