@@ -6,9 +6,9 @@ source env-server/bin/activate
 python3 -m pip install -r game/requirements.txt
 
 if [ "$1" = "plain" ]; then
-  export GAME_SSL="t"
-elif [ "$1" = "ssl" ]; then
   export GAME_SSL="f"
+elif [ "$1" = "ssl" ]; then
+  export GAME_SSL="t"
 else
   echo "Specify plain/ssl as first argument"
   exit 1
