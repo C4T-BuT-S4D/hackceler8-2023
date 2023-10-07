@@ -766,7 +766,7 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
-            if modifiers & arcade.key.MOD_OPTION or modifiers & arcade.key.MOD_ALT:
+            if not (modifiers & arcade.key.MOD_OPTION or modifiers & arcade.key.MOD_ALT):
                 self.stop_recording()
                 self.start_recording()
 
