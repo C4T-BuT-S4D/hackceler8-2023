@@ -30,7 +30,7 @@ def run_cheats_server(port: int) -> threading.Thread:
 
     @app.get("/static")
     @app.get("/static/<path:path>")
-    def static_autoindex(path="."):
+    def autoindex(path="."):
         return static_index.render_autoindex(path)
 
     @app.get("/recordings/<path:path>")
