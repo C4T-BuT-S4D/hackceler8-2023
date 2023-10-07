@@ -258,7 +258,8 @@ class Hitbox(Polygon):
         return min_x
 
     def get_height(self):
-        return round(self.get_highest_point() - self.get_lowest_point(), 2)
+        # Improve the accuracy as a test
+        return self.get_highest_point() - self.get_lowest_point()
 
     def get_width(self):
         return self.get_rightmost_point() - self.get_leftmost_point()

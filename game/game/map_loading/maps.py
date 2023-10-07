@@ -35,20 +35,14 @@ class MapAttrs(NamedTuple):
 def load() -> dict:
     base_tilemap = tilemap.BasicTileMap("resources/maps/hackceler_map.tmx")
 
-    brainduck_tilemap = tilemap.BasicTileMap("resources/maps/maze_map.tmx")
+    spike_tilemap = tilemap.BasicTileMap("resources/maps/spike_map.tmx")
 
-    speed_tilemap = tilemap.BasicTileMap("resources/maps/speed_map.tmx")
-
-    logic_tilemap = tilemap.BasicTileMap("resources/maps/logic_map.tmx")
-
-    boss_tilemap = tilemap.BasicTileMap("resources/maps/boss_map.tmx")
+    maze_tilemap = tilemap.BasicTileMap("resources/maps/maze_map.tmx")
 
     cctv_tilemap = tilemap.BasicTileMap("resources/levels/cctv/cctv_level.tmx")
     cctv_prerender = arcade.load_texture("resources/levels/cctv/cctv_level.png")
 
-    rusty_tilemap = tilemap.BasicTileMap.from_mgz(
-        "resources/levels/rusty/rusty_level.mgz"
-    )
+    rusty_tilemap = tilemap.BasicTileMap("resources/levels/rusty/rusty_level.tmx")
     rusty_prerender = arcade.load_texture("resources/levels/rusty/rusty_level.png")
 
     space_tilemap = tilemap.BasicTileMap("resources/levels/space/space_level.tmx")
@@ -57,12 +51,13 @@ def load() -> dict:
     water_tilemap = tilemap.BasicTileMap("resources/levels/water/water_level.tmx")
     water_prerender = arcade.load_texture("resources/levels/water/water_level.png")
 
+    danmaku_tilemap = tilemap.BasicTileMap("resources/maps/danmaku_map.tmx")
+
     maps_dict = {
         "base": MapAttrs(base_tilemap, None, GameMode.MODE_SCROLLER),
-        "spike": MapAttrs(brainduck_tilemap, None, GameMode.MODE_SCROLLER),
-        "speed": MapAttrs(speed_tilemap, None, GameMode.MODE_SCROLLER),
-        "logic": MapAttrs(logic_tilemap, None, GameMode.MODE_SCROLLER),
-        "boss": MapAttrs(boss_tilemap, None, GameMode.MODE_SCROLLER),
+        "spike": MapAttrs(spike_tilemap, None, GameMode.MODE_SCROLLER),
+        "maze": MapAttrs(maze_tilemap, None, GameMode.MODE_SCROLLER),
+        "danmaku": MapAttrs(danmaku_tilemap, None, GameMode.MODE_SCROLLER),
         "cctv": MapAttrs(cctv_tilemap, cctv_prerender, GameMode.MODE_PLATFORMER),
         "rusty": MapAttrs(rusty_tilemap, rusty_prerender, GameMode.MODE_PLATFORMER),
         "space": MapAttrs(space_tilemap, space_prerender, GameMode.MODE_PLATFORMER),

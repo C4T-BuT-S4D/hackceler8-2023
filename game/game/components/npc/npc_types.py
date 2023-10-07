@@ -13,15 +13,11 @@
 # limitations under the License.
 
 from .banker_npc import BankerNPC
-from .guessing_game_npc import GuessingGameNpc
 from .npc import BarkNpc
-from .password_npc import PythonNPC
 from .password_npc import SnakeNpc
 
 NPC_TYPES = {
     "bark_npc": BarkNpc,
     "snake_npc": SnakeNpc,
     "banker_npc": BankerNPC,
-    "python_npc": PythonNPC,
-    "guessing_game_npc": GuessingGameNpc,
 }

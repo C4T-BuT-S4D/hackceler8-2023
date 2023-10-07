@@ -27,11 +27,13 @@ from components import arena
 from components import boss
 from components import boss_gate
 from components import brainduck
+from components import coin
 from components import door
 from components import duck
 from components import env_element
 from components import exitarea
 from components import fire
+from components import fountain
 from components import logic
 from components import magic_items
 from components import moving_platform
@@ -128,7 +130,7 @@ class BasicTileMap:
         logging.debug(self.map_size_pixels)
         logging.debug(f"Have a total of {len(self.objs)} objects")
 
-        logging.info(f"Parsed map {self.map_file} and {self.logic_map}")
+        logging.debug(f"Parsed map {self.map_file}")
 
         self.done = False
 
@@ -330,6 +332,14 @@ class BasicTileMap:
             )
             logging.debug("added new ouch object")
 
+        elif o.name == "onetime_fountain":
+            md = props.get("min_distance", 16)
+            bft = props.get("benefit", 1)
+            self.dynamic_artifacts.append(
+                fountain.OneTimeFountain(coords, o.size, min_distance=md, benefit=bft)
+            )
+            logging.debug("added new onetime fountain object")
+
         elif o.name == "switch":
             self.objs.append(switch.Switch(coords))
 
@@ -440,6 +450,11 @@ class BasicTileMap:
 
         elif "boss_gate" in o.name:
             self.objs.append(boss_gate.BossGate(coords, o.name))
+
+        elif "coin" in o.name:
+            logging.debug(f"Adding coin")
+            decay_time = o.properties.get("decay_time_seconds", None)
+            self.objs.append(coin.Coin(coords, o.name, decay_time=decay_time))
 
         elif o.name == "Player":
             hh = props.get("hitbox_height", 32)
