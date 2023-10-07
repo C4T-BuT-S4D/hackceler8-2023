@@ -1195,6 +1195,13 @@ class Hackceler8(arcade.Window):
             )
         )
 
+        while (
+            len(self.ticks_to_apply) > 1
+            and self.ticks_to_apply[0].keys == [arcade.key.R]
+            and self.ticks_to_apply[1].keys == [arcade.key.R]
+        ):
+            self.ticks_to_apply = self.ticks_to_apply[1:]
+
     def reset_recording(self):
         self.game.current_recording = []
 
