@@ -46,6 +46,7 @@ from engine.state import SaveFile
 from engine.state import check_item_loaded
 from map_loading import maps
 from map_loading.maps import GameMode
+from cheats.settings import get_settings
 
 
 class MagicItem(Enum):
@@ -761,13 +762,15 @@ class Ludicer:
 
     def init_random(self):
         if not self.is_server:
-            self.rand_seed = 1339
-            self.rng_system.seed(self.rand_seed)
-            return
+            if seed := get_settings().get("random_seed", None):
+                self.rand_seed = seed
+                self.rng_system.seed(self.rand_seed)
+                return
 
             if self.rand_seed is None:
                 self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
                 self.rng_system.seed(self.rand_seed)
+
         # Sync seed with client on startup.
         elif self.rand_seed is not None:
             self.rng_system.seed(self.rand_seed)

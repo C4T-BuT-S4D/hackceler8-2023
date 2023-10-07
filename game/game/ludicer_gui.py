@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
 import os
 import shutil
 import time
+import traceback
 import uuid
+import ast
 
 import arcade
 import cheats_rust
@@ -377,7 +378,10 @@ class Hackceler8(arcade.Window):
                 case "Enemy":
                     color = arcade.color.RED_DEVIL
                 case "Spike":
-                    color = arcade.color.RED_DEVIL
+                    if o.on:
+                        color = arcade.color.RED_DEVIL
+                    else:
+                        color = arcade.color.PALE_RED_VIOLET
                 case "SpeedTile":
                     color = arcade.color.BLUE_GREEN
                 case "Switch":
@@ -411,9 +415,10 @@ class Hackceler8(arcade.Window):
                     )
 
                 if cheats_settings["draw_names"] and o.nametype not in {"Wall"}:
-                    arcade.draw_text(
-                        f"{o.nametype} | {o.name}", rect.x1(), rect.y2() + 6, color
-                    )
+                    text = f"{o.nametype} | {o.name}"
+                    if hasattr(o, "health"):
+                        text += f" | {o.health}"
+                    arcade.draw_text(text, rect.x1(), rect.y2() + 6, color)
 
                 if cheats_settings["draw_lines"]:
                     if o.nametype == "Item":
@@ -687,6 +692,39 @@ class Hackceler8(arcade.Window):
             self.slow_ticks_mode = not self.slow_ticks_mode
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
+
+        if symbol == arcade.key.V:
+            settings = get_settings()
+            keys_to_press = settings["keys_to_press"]
+            if not keys_to_press:
+                return
+
+            keys_to_press = ast.literal_eval(keys_to_press)
+            try:
+                for keys in keys_to_press:
+                    # keys: str (single symbol)
+                    # keys: list[str] (multiple symbols)
+                    # keys: list[int]
+                    if isinstance(keys, str):
+                        keys = keys.split(",")
+                    # keys: list[str] (multiple symbols)
+                    # keys: list[int]
+
+                    self.game.raw_pressed_keys = set()
+                    for key in keys:
+                        if isinstance(key, str):
+                            key = getattr(arcade.key, key)
+                        self.game.raw_pressed_keys.add(key)
+
+                    self.game.tick()
+                    if settings["render_keys_to_press"]:
+                        self.on_draw()
+                    time.sleep(pyglet.clock.get_sleep_time(True))
+            except Exception as e:
+                print(f"bad keys: {keys_to_press}: {e}\n{traceback.format_exc()}")
+            finally:
+                self.game.raw_pressed_keys = set()
+                return
 
         # enable automatic shooting which will always select the next
         # weapon to shoot once we've shot the current one
