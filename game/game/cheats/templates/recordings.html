@@ -34,11 +34,11 @@
         </div>
       </div>
     {%- endif %}
-    {%- if screenshot_src is not none %}
+    {%- if screenshot_name is not none %}
       <div class="field">
         <label class="label">Recording</label>
         <div class="control">
-          <img src="{{ screenshot_src }}" />
+          <img src="/recordings/{{ screenshot_name }}" />
         </div>
       </div>
     {%- endif %}
