@@ -96,7 +96,7 @@ class Settings(FlaskForm):
     )
 
     cancel_macro_on_key_press = BooleanField(
-        default=False,
+        default=True,
         label="Cancel macros on key",
         description="Cancel macros when any key is pressed",
     )
@@ -105,6 +105,12 @@ class Settings(FlaskForm):
         default=0,
         label="Random seed",
         description="Random seed for the game",
+    )
+
+    auto_recording_interval = IntegerField(
+        default=5,
+        label="Auto recording interval",
+        description="Interval between auto recordings in seconds",
     )
 
     submit_button = SubmitField("Submit Form")
