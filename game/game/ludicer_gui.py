@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import ast
 import logging
 import os
 import shutil
 import time
 import traceback
 import uuid
-import ast
 
 import arcade
 import cheats_rust
@@ -696,14 +696,34 @@ class Hackceler8(arcade.Window):
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
 
-        if symbol == arcade.key.V:
+        if (
+            (modifiers & arcade.key.MOD_ALT) != 0
+            or (modifiers & arcade.key.MOD_OPTION) != 0
+        ) and (
+            symbol
+            in {
+                arcade.key.KEY_1,
+                arcade.key.KEY_2,
+                arcade.key.KEY_3,
+                arcade.key.KEY_4,
+                arcade.key.KEY_5,
+                arcade.key.KEY_6,
+                arcade.key.KEY_7,
+                arcade.key.KEY_8,
+                arcade.key.KEY_9,
+            }
+        ):
             settings = get_settings()
-            keys_to_press = settings["keys_to_press"]
-            if not keys_to_press:
+            macros = settings["macros"]
+            if not macros:
                 return
 
-            keys_to_press = ast.literal_eval(keys_to_press)
             try:
+                macros = ast.literal_eval(macros)
+                assert type(macros) == list
+
+                keys_to_press = macros[symbol - arcade.key.KEY_1]
+
                 self.add_movement_keys = []
                 for keys in keys_to_press:
                     # keys: str (single symbol)
@@ -721,7 +741,7 @@ class Hackceler8(arcade.Window):
                         cur_keys.add(key)
                     self.add_movement_keys.append(cur_keys)
             except Exception as e:
-                print(f"bad keys: {keys_to_press}: {e}\n{traceback.format_exc()}")
+                print(f"bad macros: {macros}: {e}\n{traceback.format_exc()}")
             finally:
                 return
 
