@@ -32,5 +32,14 @@ else
   exit 1
 fi
 
+if [ "$2" = "plain" ]; then
+  export GAME_SSL="t"
+elif [ "$2" = "ssl" ]; then
+  export GAME_SSL="f"
+else
+  echo "Specify plain/ssl as second argument"
+  exit 1
+fi
+
 cd game
 python3 client.py --ca="$capath" $standalone "$hostname" 8888 8889 "$certpath"
