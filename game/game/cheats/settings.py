@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from threading import RLock
 from typing import Callable
@@ -127,7 +128,7 @@ def init_settings():
     data = dict()
     for form in forms:
         data.update(**deepcopy(form.data))
-    print(f"Initial settings: {data}")
+    logging.info(f"Initial settings: {data}")
     update_settings(lambda s: s.update(**data))
 
 

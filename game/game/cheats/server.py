@@ -1,11 +1,14 @@
 import os
 import threading
+import logging
 from copy import deepcopy
 
 from flask import Flask
+from flask import redirect
 from flask import render_template
 from flask import request
 from flask import send_file
+from flask import url_for
 from flask_autoindex import AutoIndex
 
 from cheats.maps import request_render
@@ -44,9 +47,10 @@ def run_cheats_server(port: int) -> threading.Thread:
             for form in forms:
                 data.update(**deepcopy(form.data))
 
-            print(f"Updating cheat settings: {data}")
+            logging.info(f"Updating cheat settings: {data}")
 
             update_settings(lambda s: s.update(**data))
+            return redirect(url_for("index"))
 
         return render_template("index.html", forms=forms)
 
