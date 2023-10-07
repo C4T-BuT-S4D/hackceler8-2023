@@ -222,6 +222,8 @@ class Ludicer:
         # cheat sh[ee]it.
         self.current_recording = []
 
+        self.force_random_seed = None
+
     @property
     def won(self):
         # Game is won if the time is neither None nor 0
@@ -774,6 +776,11 @@ class Ludicer:
 
     def init_random(self):
         if not self.is_server:
+            if self.force_random_seed:
+                self.rand_seed = self.force_random_seed
+                self.rng_system.seed(self.rand_seed)
+                return
+
             if seed := get_settings().get("random_seed", None):
                 self.rand_seed = seed
                 self.rng_system.seed(self.rand_seed)

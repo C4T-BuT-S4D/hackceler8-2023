@@ -440,6 +440,8 @@ class Hackceler8(arcade.Window):
                     if hasattr(o, "health"):
                         text += f" | {o.health}"
                     arcade.draw_text(text, rect.x1(), rect.y2() + 6, color)
+                    if o.nametype == "Spike":
+                        text += f" | {o.tic}"
 
                 if cheats_settings["draw_lines"]:
                     if o.nametype == "Item":
@@ -572,11 +574,13 @@ class Hackceler8(arcade.Window):
 
     def tick_game_with_movement_and_shooting(self):
         keys_to_restore = None
+        random_to_restore = None
         if self.ticks_to_apply:
             tick_to_apply = self.ticks_to_apply.pop(0)
             keys_to_restore = self.game.raw_pressed_keys.copy()
 
-            self.game.random_seed = tick_to_apply.random_seed
+            random_to_restore = self.game.force_random_seed
+            self.game.force_random_seed = tick_to_apply.random_seed
 
             if tick_to_apply.force_keys:
                 self.game.raw_pressed_keys = set(tick_to_apply.keys)
@@ -613,6 +617,8 @@ class Hackceler8(arcade.Window):
             self.tick_game_with_shooting()
             if keys_to_restore is not None:
                 self.game.raw_pressed_keys = keys_to_restore
+            if random_to_restore is not None:
+                self.game.force_random_seed = random_to_restore
             return
 
         if get_settings()["validate_transitions"]:
