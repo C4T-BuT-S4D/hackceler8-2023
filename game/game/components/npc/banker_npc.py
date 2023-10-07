@@ -14,7 +14,6 @@
 
 import logging
 
-from components.magic_items import Item
 from engine import hitbox
 from engine.shop import Shop
 from engine.shop import ShopItem
@@ -23,7 +22,7 @@ from .npc import Npc
 
 
 class BankerNPC(Npc):
-    solved = False
+    solved = {}
 
     def __init__(self, coords, name, walk_data):
         super().__init__(
@@ -33,30 +32,16 @@ class BankerNPC(Npc):
             scale=1,
             tileset_path="resources/NPCs/Fancy_Racoon_NPC.tmx",
         )
-        self.item = Item(
-            coords=None, name="key_orange", display_name="Orange key", color="orange"
-        )
-
+        self.id = id
+        # self.is_correct_fun = is_correct_fun
         self.shop = Shop(
             items=[
-                ShopItem("Red backpack", 17),
-                ShopItem("Orange backpack", 86),
-                ShopItem("Beige backpack", 55),
-                ShopItem("Yellow backpack", 12),
-                ShopItem("Green backpack", 14),
-                ShopItem("Blue backpack", 37),
-                ShopItem("Purple backpack", 27),
-                ShopItem("Lavendel backpack", 49),
-                ShopItem("Pink backpack", 95),
-                ShopItem("Brown backpack", 94),
-                ShopItem("Black backpack", 79),
-                ShopItem("Gray backpack", 53),
-                ShopItem("White backpack", 43),
-                ShopItem("Empty backpack", 37),
+                ShopItem("Cookie", 1, True),
+                ShopItem("Badge", 100),
+                ShopItem("Flag", 100000),
             ],
-            initial_cash=2373,
+            initial_cash=100,
         )
-        self.id = id
         outline = [
             hitbox.Point(coords.x - 15, coords.y - 25),
             hitbox.Point(coords.x + 15, coords.y - 25),
@@ -168,19 +153,8 @@ class BankerNPC(Npc):
         )
 
     def basic_interaction(self, resp):
-        if self.shop.current_cash != 0:
-            self.display_textbox(
-                "You buyin' or sellin'? You can also check your inventory",
-                choices=["Buying", "Selling", "Inventory", "I'm good thanks"],
-                process_fun=self.switcher,
-            )
-        else:
-            if not self.solved:
-                self.display_textbox(
-                    "Looks like you spent all ya cash! Here's an item for ya'"
-                )
-                self.solved = True
-                if self.item is not None:
-                    self.game.gather_items([self.item])
-            else:
-                self.display_textbox("Nice try, you already got that item ")
+        self.display_textbox(
+            "You buyin' or sellin'? You can also check your inventory",
+            choices=["Buying", "Selling", "Inventory", "I'm good thanks"],
+            process_fun=self.switcher,
+        )

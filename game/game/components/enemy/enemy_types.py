@@ -15,6 +15,7 @@
 from .enemy import EvilCamera
 from .enemy import Martian
 from .enemy import MovingJellyfish
+from .enemy import RegenJellyfishEnemy
 from .enemy import StaticJellyfish
 
 ENEMY_TYPES = {
@@ -22,4 +23,5 @@ ENEMY_TYPES = {
     "moving_jellyfish_enemy": MovingJellyfish,
     "camera_enemy": EvilCamera,
     "martian_enemy": Martian,
+    "regen_jellyfish_enemy": RegenJellyfishEnemy,
 }

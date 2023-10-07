@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="400" height="200" tilewidth="16" tileheight="16" infinite="0" nextlayerid="14" nextobjectid="41">
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="400" height="200" tilewidth="16" tileheight="16" infinite="0" nextlayerid="14" nextobjectid="39">
  <tileset firstgid="1" source="rusty_tileset.tsx"/>
  <tileset firstgid="1201" source="../../maps/hackceler_test.tsx"/>
  <tileset firstgid="1321" source="../cctv/cctv_tileset.tsx"/>
@@ -820,7 +820,7 @@
 </data>
  </layer>
  <objectgroup id="4" name="Player">
-  <object id="1" name="Player" x="79.8797" y="1755.15">
+  <object id="1" name="Player" x="160" y="1728">
    <properties>
     <property name="hitbox_height" type="int" value="32"/>
     <property name="hitbox_width" type="int" value="32"/>
@@ -873,7 +873,6 @@
   </object>
   <object id="27" name="camera_enemy" x="4464" y="1692">
    <properties>
-    <property name="control_inverter" type="bool" value="true"/>
     <property name="respawn" type="bool" value="true"/>
     <property name="walk_data" value="2000,W300,E300"/>
    </properties>
@@ -881,8 +880,7 @@
   </object>
   <object id="28" name="camera_enemy" x="4768" y="584">
    <properties>
-    <property name="control_inverter" type="bool" value="true"/>
-    <property name="respawn" type="bool" value="true"/>
+    <property name="respawn" type="bool" value="false"/>
    </properties>
    <point/>
   </object>
@@ -926,10 +924,10 @@
     <property name="y_speed" type="int" value="300"/>
    </properties>
   </object>
-  <object id="38" name="banker_npc" x="4048" y="768">
-   <point/>
+  <object id="38" name="password_npc_green" x="4030.5" y="787">
+   <properties>
+    <property name="walk_data" value="2000,E270,W270"/>
+   </properties>
   </object>
-  <object id="39" name="ouch" x="1248.86" y="1299.4" width="521.788" height="75.5"/>
-  <object id="40" name="ouch" x="1779.11" y="1228.92" width="251.121" height="75.5"/>
  </objectgroup>
 </map>

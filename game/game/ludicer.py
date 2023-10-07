@@ -94,9 +94,8 @@ class Ludicer:
         self.original_maps_dict = copy(self.maps_dict)
 
         self.arena_mapping = {
-            "speed_arena": "speed",
-            "logic_arena": "logic",
-            "boss_arena": "boss",
+            "spike_arena": "spike",
+            "danmaku_arena": "danmaku",
             "purple_arena": "cctv",
             "red_arena": "rusty",
             "violet_arena": "space",
@@ -140,6 +139,7 @@ class Ludicer:
         self.prerender = None
         self.map_switch = None
         self.textbox = None
+        self.jam_session = None
         self.current_mode = None
         self.state_hash = None
         self.cheating_detected = False
@@ -184,6 +184,22 @@ class Ludicer:
             arcade.key.R,
             arcade.key.P,
             arcade.key.F,
+            # Music
+            arcade.key.ENTER,
+            arcade.key.EQUAL,
+            arcade.key.ESCAPE,
+            arcade.key.KEY_0,
+            arcade.key.KEY_1,
+            arcade.key.KEY_2,
+            arcade.key.KEY_3,
+            arcade.key.KEY_4,
+            arcade.key.KEY_5,
+            arcade.key.KEY_6,
+            arcade.key.KEY_7,
+            arcade.key.KEY_8,
+            arcade.key.KEY_9,
+            arcade.key.MINUS,
+            arcade.key.RETURN,
             # NPC
             arcade.key.E,
             arcade.key.ENTER,
@@ -213,7 +229,7 @@ class Ludicer:
         self.win_timestamp = time.time()
 
     def dump_state(self):
-        h = ""
+        h = self.tiled_map.hck_hash()
         for i in (
             self.objects
             + self.static_objs
@@ -259,9 +275,10 @@ class Ludicer:
                 color="blue",
                 wearable=False,
             ),
-            Item(None, name="goggles", display_name="Goggles", wearable=True),
-            Item(None, name="boots", display_name="Boots", wearable=True),
-            Item(None, name="flag_llm", display_name="LLM flag", wearable=False),
+            Item(None, name="noogler", display_name="NooglerHat", wearable=True),
+            Item(
+                None, name="flag_danmaku", display_name="Danmaku flag", wearable=False
+            ),
         ]
 
         for i in its:
@@ -439,6 +456,7 @@ class Ludicer:
 
         self.physics_engine = physics.PhysicsEngine(
             platformer_rules=(self.current_mode == GameMode.MODE_PLATFORMER),
+            danmaku_rules=(self.current_map == "danmaku"),
             objects=[self.player] + self.objects + self.dynamic_artifacts,
             qt=self.tiled_map.qt,
             obj_map=self.tiled_map.obj_map,
@@ -454,8 +472,7 @@ class Ludicer:
     def setup_platformer(self):
         self.setup_scroller()
         self.player.base_y_speed = 320
-        if self.current_map == "water":
-            self.level_modifier = Ludifier(self.tiled_map, len(self.items))
+        self.level_modifier = Ludifier(self.tiled_map)
 
     def switch_maps(self, new_map):
         if (new_map == "boss" or new_map == "danmaku") and len(self.unlocked_doors) < 4:
@@ -498,6 +515,7 @@ class Ludicer:
             if arcade.key.E in self.newly_pressed_keys:
                 self.newly_pressed_keys.remove(arcade.key.E)
 
+        self.jam_session = None
         self.textbox = textbox.Textbox(
             self, text, cleanup, choices, free_text, from_llm, process_fun
         )
@@ -522,7 +540,13 @@ class Ludicer:
         Thread(target=_query_llm, args=(text,), daemon=True).start()
 
     def objects_frozen(self):
-        return self.map_switch is not None or self.textbox is not None
+        return any(
+            [
+                self.map_switch,
+                self.textbox,
+                self.jam_session,
+            ]
+        )
 
     def send_game_info(self):
         if self.is_server or self.net is None:
@@ -602,7 +626,11 @@ class Ludicer:
             self.recv_from_server()
         self.dump_state()
         self.prev_display_inventory = self.display_inventory
-        if arcade.key.P in self.newly_pressed_keys and self.textbox is None:
+        if (
+            arcade.key.P in self.newly_pressed_keys
+            and self.textbox is None
+            and self.jam_session is None
+        ):
             self.display_inventory = not self.display_inventory
         if self.display_inventory:
             self.inventory.tick(self.newly_pressed_keys)
@@ -635,10 +663,16 @@ class Ludicer:
                 if o.nametype == "Boss":
                     o.sprite.tick()
 
+        was_jam_session = False
+        if self.jam_session is not None:
+            was_jam_session = True
+            self.jam_session.player = self.player
+            self.jam_session.tick(self.pressed_keys, self.newly_pressed_keys)
+
         if self.objects_frozen():
             return self.send_game_info()
 
-        if arcade.key.ESCAPE in self.newly_pressed_keys:
+        if arcade.key.ESCAPE in self.newly_pressed_keys and not was_jam_session:
             self.reset_to_main_map()
         elif arcade.key.R in self.newly_pressed_keys:
             self.reset_current_level()
@@ -651,7 +685,7 @@ class Ludicer:
         if self.grenade_system:
             self.grenade_system.tick(self.newly_pressed_keys)
         if self.danmaku_system:
-            self.danmaku_system.tick(self.pressed_keys)
+            self.danmaku_system.tick(self.pressed_keys, self.newly_pressed_keys)
 
         for o in list(self.objects):
             o.game = self
@@ -690,10 +724,9 @@ class Ludicer:
             self.switch_maps("base")
 
         if self.level_modifier is not None:
-            new_objects = self.level_modifier.tick()
-            if new_objects is not None:
-                for _o in new_objects:
-                    self.static_objs.append(_o)
+            new_object = self.level_modifier.tick()
+            if new_object is not None:
+                self.static_objs.append(new_object)
 
         return self.send_game_info()
 
@@ -703,7 +736,7 @@ class Ludicer:
                 self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
                 self.rng_system.seed(self.rand_seed)
         # Sync seed with client on startup.
-        elif self.rand_seed is not None and self.tics == 0:
+        elif self.rand_seed is not None:
             self.rng_system.seed(self.rand_seed)
             self.rand_seed = None
 
@@ -793,13 +826,6 @@ class Ludicer:
                         self.player.set_speed(o.x_speed, o.y_speed)
                         self.player.in_the_air = True
                         return
-
-                    case "Wall":
-                        if o.name == "killawall":
-                            logging.info(":/")
-                            self.player.set_health(0)
-                            if self.level_modifier is not None:
-                                self.level_modifier.stop()
 
         for o in self.objects:
             if o.blocking:
