@@ -21,6 +21,7 @@ import uuid
 import arcade
 import cheats_rust
 import pyglet
+import pyglet.media
 from arcade import gui
 from PIL import Image
 from pyglet.image import load as pyglet_load
@@ -83,6 +84,7 @@ class Hackceler8(arcade.Window):
         self.show_menu()
 
         self.slow_ticks_mode = False
+        logging.info("Using audio driver {}".format(pyglet.media.get_audio_driver()))
 
     def show_menu(self):
         self.main_menu_manager.enable()
@@ -282,6 +284,11 @@ class Hackceler8(arcade.Window):
 
         if self.game.textbox is not None:
             self.game.textbox.draw()
+        if self.game.jam_session is not None:
+            self.game.jam_session.draw()
+            self.camera.use()
+            self.game.jam_session.draw_notes()
+            self.gui_camera.use()
         if self.game.map_switch is not None:
             self.game.map_switch.draw()
 
