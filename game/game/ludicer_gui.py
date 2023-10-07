@@ -230,6 +230,17 @@ class Hackceler8(arcade.Window):
             font_name=constants.FONT_NAME,
         )
 
+        if self.recording_enabled:
+            size = 30
+            offset = 10
+            arcade.draw_lrtb_rectangle_filled(
+                offset,
+                offset + size,
+                30 + offset + size,
+                30 + offset,
+                arcade.csscolor.RED,
+            )
+
         if len(self.draws) > 1:
             arcade.draw_text(
                 "FPS: %.02f" % (len(self.draws) / (self.draws[-1] - self.draws[0])),
