@@ -570,8 +570,6 @@ class Hackceler8(arcade.Window):
             else:
                 self.game.raw_pressed_keys |= set(tick_to_apply.keys)
 
-            self.ticks_to_apply = self.ticks_to_apply[1:]
-
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
@@ -709,6 +707,9 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
+        if symbol in {arcade.key.LCTRL, arcade.key.LALT, arcade.key.LOPTION, arcade.key.LCOMMAND, arcade.key.TAB}:
+            return
+
         if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
             if self.recording_enabled:
                 self.recording_enabled = False
@@ -729,6 +730,10 @@ class Hackceler8(arcade.Window):
 
         if symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
             self.save_recording()
+            return
+
+        if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
+            self.load_recording()
             return
 
         if symbol in {arcade.key.EQUAL, arcade.key.PLUS}:
@@ -760,7 +765,7 @@ class Hackceler8(arcade.Window):
 
             try:
                 macros = ast.literal_eval(macros)
-                assert isinstance(macros, list)
+                assert isinstance(macros, (list, tuple))
 
                 keys_to_press = macros[symbol - arcade.key.KEY_1]
 
@@ -783,7 +788,7 @@ class Hackceler8(arcade.Window):
                         TickData(
                             keys=list(cur_keys),
                             random_seed=settings["random_seed"],
-                            force_keys=True,
+                            force_keys=False,
                         )
                     )
             except Exception as e:
@@ -872,11 +877,12 @@ class Hackceler8(arcade.Window):
 
             self.game.raw_pressed_keys = original_pressed_keys
 
-        if symbol == arcade.key.M:
-            return
-
         if get_settings()["cancel_macro_on_key_press"]:
             self.ticks_to_apply = []
+            print('canceled macro on key press', symbol)
+
+        if symbol == arcade.key.M:
+            return
 
         self.game.raw_pressed_keys.add(symbol)
 
@@ -1085,7 +1091,7 @@ class Hackceler8(arcade.Window):
                     self.ticks_to_apply.append(
                         TickData(
                             force_keys=True,
-                            keys=moves,
+                            keys=list(moves),
                             random_seed=get_settings()["random_seed"],
                         )
                     )
@@ -1099,7 +1105,22 @@ class Hackceler8(arcade.Window):
             json.dump(self.game.current_recording, f, indent=2)
 
         self.last_save = time.time()
-        self.game.current_recording = []
+
+    def load_recording(self):
+        # filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
+        filename = "base-2023-10-07T18:29:49.295629-00964.json"
+        path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
+        with open(path, "r") as f:
+            data = json.load(f)
+
+        self.ticks_to_apply = [
+            TickData(
+                keys=tick.get("raw_keys", []),
+                random_seed=tick.get("seed", 0),
+                force_keys=True,
+            )
+            for tick in data
+        ]
 
     def reset_recording(self):
         self.game.current_recording = []
