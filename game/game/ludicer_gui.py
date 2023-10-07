@@ -766,7 +766,9 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
-            if not (modifiers & arcade.key.MOD_OPTION or modifiers & arcade.key.MOD_ALT):
+            if not (
+                modifiers & arcade.key.MOD_OPTION or modifiers & arcade.key.MOD_ALT
+            ):
                 self.stop_recording()
                 self.start_recording()
 
@@ -867,17 +869,27 @@ class Hackceler8(arcade.Window):
         if self.game.danmaku_system and auto_weapon_shooting_keys:
             self.auto_danmaku_shooting = not self.auto_danmaku_shooting
 
-        if (
-            self.slow_ticks_mode
-            and symbol == arcade.key.BACKSPACE
-            and self.game is not None
-        ):
+        if self.slow_ticks_mode and symbol == arcade.key.BACKSLASH and self.game:
+            self.slow_ticks_mode = False
+            self.on_update(0)
+            self.slow_ticks_mode = True
+
+            print(
+                f"[BL] player state: {self.game.player.x=} {self.game.player.y=} "
+                f"{self.game.player.x_speed=} {self.game.player.y_speed=} {self.game.player.push_speed=} "
+                f"{self.game.player.in_the_air=} {self.game.player.dead=} "
+                f"{self.game.player.health=} "
+            )
+
+            return
+
+        if self.slow_ticks_mode and symbol == arcade.key.BACKSPACE and self.game:
             for _ in range(get_settings()["slow_ticks_count"]):
                 self.tick_game_with_movement_and_shooting()
 
             self.center_camera_to_player()
             print(
-                f"player state: {self.game.player.x=} {self.game.player.y=} "
+                f"[BS] player state: {self.game.player.x=} {self.game.player.y=} "
                 f"{self.game.player.x_speed=} {self.game.player.y_speed=} {self.game.player.push_speed=} "
                 f"{self.game.player.in_the_air=} {self.game.player.dead=} "
                 f"{self.game.player.health=} "
