@@ -64,13 +64,6 @@ def run_cheats_server(port: int) -> threading.Thread:
 
     @app.route("/recordings", methods=["GET", "POST"])
     def recordings():
-        if request.method == "POST":
-            chosen_recording = request.args.get("recording")
-            update_settings(lambda s: s.update(recording_filename=chosen_recording))
-
-            logging.info(f"Set chosen recording to {chosen_recording}")
-            return redirect(url_for("recordings", **request.args))
-
         all_recordings = os.listdir(
             os.path.join(os.path.dirname(__file__), "recordings")
         )
@@ -103,6 +96,12 @@ def run_cheats_server(port: int) -> threading.Thread:
             and len(map_recordings) > 0
         ):
             chosen_recording = map_recordings[0]
+
+        if request.method == "POST":
+            update_settings(lambda s: s.update(recording_filename=chosen_recording))
+
+            logging.info(f"Set chosen recording to {chosen_recording}")
+            return redirect(url_for("recordings", **request.args))
 
         screenshot_name = None
         if chosen_recording is not None:
