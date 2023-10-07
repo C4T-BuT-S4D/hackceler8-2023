@@ -106,6 +106,7 @@ class Enemy(generics.GenericObject):
             return
 
         if not self._visible_to_player():
+            self.walk_data.reset()
             return
 
         if len(self.walk_data.data) > 0:

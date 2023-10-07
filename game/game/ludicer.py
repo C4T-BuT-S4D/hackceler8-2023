@@ -27,7 +27,6 @@ import xxhash
 
 import constants
 from components import textbox
-from components.coin import CoinCollection
 from components.enemy.enemy import Enemy
 from components.inventory import Inventory
 from components.llm.llm import Llm
@@ -89,19 +88,15 @@ class Ludicer:
                 except Exception as e:
                     logging.critical(f"Unable to read file {self.load_file}: {e}")
 
-        if debug:
-            self.maps_dict = maps.load_debug()
-        else:
-            self.maps_dict = maps.load()
+        self.maps_dict = maps.load()
 
         # We keep a pristine copy to allow for resets
         self.original_maps_dict = copy(self.maps_dict)
 
         self.arena_mapping = {
-            "spike_arena": "spike",
-            "maze_arena": "maze",
+            "speed_arena": "speed",
+            "logic_arena": "logic",
             "boss_arena": "boss",
-            "danmaku_arena": "danmaku",
             "purple_arena": "cctv",
             "red_arena": "rusty",
             "violet_arena": "space",
@@ -159,8 +154,6 @@ class Ludicer:
         self.logic_engine = None
         self.danmaku_system = None
         self.grenade_system = None
-        self.coin_collection = None
-        self.brainduck = None
 
         self.boss = None
         self.unlocked_doors = set()
@@ -236,7 +229,7 @@ class Ludicer:
     # This section needsto be hardcoded for each match
     def get_all_available_items(self):
         self.boss_danmaku_exists = True
-        self.boss_llm_exists = False
+        self.boss_llm_exists = True
         # Need to add variable items here
         its = [
             Item(
@@ -269,9 +262,7 @@ class Ludicer:
             ),
             Item(None, name="goggles", display_name="Goggles", wearable=True),
             Item(None, name="boots", display_name="Boots", wearable=True),
-            Item(
-                None, name="flag_danmaku", display_name="Danmaku flag", wearable=False
-            ),
+            Item(None, name="flag_llm", display_name="LLM flag", wearable=False),
         ]
 
         for i in its:
@@ -357,7 +348,6 @@ class Ludicer:
         self.physics_engine = None
         self.logic_engine = None
         self.level_modifier = None
-        self.brainduck = None
         self.current_mode = self.maps_dict[self.current_map].game_mode
 
         match self.current_mode:
@@ -395,8 +385,6 @@ class Ludicer:
             o.reset()
             self.dynamic_artifacts.append(o)
 
-        self.coin_collection = None
-
         logging.info(f"Items before parsing: {self.items}")
         for o in self.tiled_map.objs:
             o.reset()
@@ -426,12 +414,7 @@ class Ludicer:
                     self.objects.append(o)
                 else:
                     logging.info(f"Duplicate object {o.nametype, o.name} detected")
-            elif o.nametype == "Coin":
-                if self.coin_collection is None:
-                    self.coin_collection = CoinCollection(self)
-                if not self.coin_collection.solved:
-                    self.coin_collection.add(o)
-                    self.objects.append(o)
+
             else:
                 self.objects.append(o)
                 if o.nametype == "Boss":
@@ -443,8 +426,7 @@ class Ludicer:
 
         targets = [o for o in self.objects if o.nametype == "Enemy"]
         self.combat_system = CombatSystem(self, self.tiled_map.weapons, targets=targets)
-
-        if self.current_map in {"rusty"}:
+        if self.current_map in {"cctv"}:
             self.grenade_system = GrenadeSystem(self, targets=targets)
 
         if self.current_map == "danmaku":
@@ -455,13 +437,9 @@ class Ludicer:
         self.static_objs = self.tiled_map.static_objs.copy()
         for o in self.static_objs:
             o.reset()
-            if o.nametype == "Brainduck":
-                logging.info("Have Brainduck")
-                self.brainduck = o
 
         self.physics_engine = physics.PhysicsEngine(
             platformer_rules=(self.current_mode == GameMode.MODE_PLATFORMER),
-            danmaku_rules=(self.current_map == "danmaku"),
             objects=[self.player] + self.objects + self.dynamic_artifacts,
             qt=self.tiled_map.qt,
             obj_map=self.tiled_map.obj_map,
@@ -477,8 +455,8 @@ class Ludicer:
     def setup_platformer(self):
         self.setup_scroller()
         self.player.base_y_speed = 320
-        if self.current_map == "space":
-            self.level_modifier = Ludifier(self.tiled_map)
+        if self.current_map == "water":
+            self.level_modifier = Ludifier(self.tiled_map, len(self.items))
 
     def switch_maps(self, new_map):
         if (new_map == "boss" or new_map == "danmaku") and len(self.unlocked_doors) < 4:
@@ -692,10 +670,6 @@ class Ludicer:
                         self.boss_danmaku_win_time = time.time()
                     case "alpha":
                         self.boss_llm_win_time = time.time()
-
-            if o.nametype == "Coin" and o.decayed:
-                self.objects.remove(o)
-
         if self.global_match_items.won_all():
             logging.info(f"Completed the game! Play time: %s" % self.play_time_str())
             self.won = True
@@ -730,8 +704,6 @@ class Ludicer:
             self.prev_pressed_keys = self.pressed_keys.copy()
 
         if self.player is not None:
-            if self.brainduck is not None:
-                self.handle_duck_logic()
             self.player.tick(
                 self.pressed_keys,
                 self.newly_pressed_keys,
@@ -744,22 +716,15 @@ class Ludicer:
         self.logic_engine.tick()
 
         if self.physics_engine.exit_on_next:
-            self.handle_duck_exit()
             self.switch_maps("base")
 
         if self.level_modifier is not None:
-            new_object = self.level_modifier.tick()
-            if new_object is not None:
-                self.static_objs.append(new_object)
-
-        self.coin_check()
+            new_objects = self.level_modifier.tick()
+            if new_objects is not None:
+                for _o in new_objects:
+                    self.static_objs.append(_o)
 
         return self.send_game_info()
-
-    def coin_check(self):
-        if self.coin_collection is not None:
-            if self.coin_collection.check():
-                self.gather_items([self.coin_collection.item])
 
     def init_random(self):
         if not self.is_server:
@@ -771,7 +736,7 @@ class Ludicer:
                 self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
                 self.rng_system.seed(self.rand_seed)
         # Sync seed with client on startup.
-        elif self.rand_seed is not None:
+        elif self.rand_seed is not None and self.tics == 0:
             self.rng_system.seed(self.rand_seed)
             self.rand_seed = None
 
@@ -840,10 +805,9 @@ class Ludicer:
                         )
 
                     case "ExitArea":
-                        logging.info(f"Player collided with {o.name}")
-                        self.handle_duck_exit()
-                        self.switch_maps("base")
+                        logging.debug(f"Player collided with {o.name}")
                         self.dump_state()
+                        self.switch_maps("base")
                         return
 
                     case "Portal":
@@ -863,11 +827,12 @@ class Ludicer:
                         self.player.in_the_air = True
                         return
 
-                    case "Brainduck":
-                        self.activate_duck_mode()
-
-                    case "Duck":
-                        self.duck_collision(o)
+                    case "Wall":
+                        if o.name == "killawall":
+                            logging.info(":/")
+                            self.player.set_health(0)
+                            if self.level_modifier is not None:
+                                self.level_modifier.stop()
 
         for o in self.objects:
             if o.blocking:
@@ -907,51 +872,3 @@ class Ludicer:
                 c, _ = o.collides(self.player)
                 if c and arcade.key.E in self.newly_pressed_keys:
                     o.interact()
-
-            elif o.nametype == "Coin":
-                c, _ = o.collides(self.player)
-                if c:
-                    o.collected = True
-                    logging.info(f"Player collected coin {o.name}")
-                    self.objects.remove(o)
-
-    def activate_duck_mode(self):
-        if self.brainduck is None:
-            logging.critical("No brainduck in current map")
-            return
-        if self.brainduck.active:
-            return
-        logging.info(f"Player collided with Brainduck, entering " f"duck mode.")
-
-        self.brainduck.start()
-        self.brainduck.active = True
-
-    def duck_collision(self, _duck):
-        if not _duck.visited:
-            self.brainduck.duck_ids.append(_duck.duck_id)
-
-    def handle_duck_logic(self):
-        duck_input = self.brainduck.tick(self.pressed_keys, self.newly_pressed_keys)
-        if duck_input == "recording":
-            return
-
-        if duck_input is None:
-            logging.info("No more input. Stopping duck mode.")
-            logging.info(
-                f"Total time in maze " f"{time.time() - self.brainduck.start_time}"
-            )
-            self.brainduck.stop()
-            self.brainduck = None
-            # self.duck_mode = False
-            self.player.dead = True
-
-        else:
-            logging.debug(f"Got newly pressed key {duck_input}")
-            self.pressed_keys = [duck_input[0]]
-            if duck_input[1]:
-                self.pressed_keys.append(arcade.key.LSHIFT)
-
-    def handle_duck_exit(self):
-        if self.brainduck is not None:
-            self.gather_items([self.brainduck.yield_item()])
-            self.brainduck = None

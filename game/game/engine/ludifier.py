@@ -29,19 +29,23 @@ class FakeCoord:
 
 
 class Ludifier:
-    def __init__(self, map):
-        self.map = map
+    def __init__(self, _map, its):
+        self.map = _map
         logging.info(self.map)
         logging.info(self.map.size)
-        self.max_x = map.size[0]
-        self.max_y = map.size[1]
+        self.max_x = self.map.size[0]
+        self.max_y = self.map.size[1]
 
         self.counter = 0
         # How many tiles per second are being nuked
-        self.advancement_speed = 8
+        self.advancement_speed = 7
         self.wall_width = self.map.tile_size[0]
+        self.wall_height = self.map.tile_size[1]
+        self.stopped = False
 
     def tick(self):
+        if self.stopped:
+            return
         self.counter += 1
         if not self.counter % self.advancement_speed:
             logging.debug("Adding a new wall")
@@ -52,4 +56,15 @@ class Ludifier:
                 FakeSize(self.wall_width, 10000),
                 "killawall",
             )
-            return w
+
+            w_v = Wall(
+                FakeCoord(
+                    0, self.counter // self.advancement_speed * self.wall_width + 1
+                ),
+                FakeSize(10000, self.wall_height),
+                "killawall",
+            )
+            return [w_v]
+
+    def stop(self):
+        self.stopped = True

@@ -16,11 +16,10 @@ from collections import defaultdict
 
 
 class ShopItem:
-    def __init__(self, name, value, sellable=False, sell_value=0):
+    def __init__(self, name, value, sellable=False):
         self.name = name
         self.value = value
         self.sellable = sellable
-        self.sell_value = value if sell_value == 0 else sell_value
 
 
 class Shop:
@@ -54,7 +53,7 @@ class Shop:
         logging.info(f"Selling item {item_name}")
         if self.player_inventory.get(item_name, 0) > 0:
             if self.items[item_name].sellable:
-                self.current_cash += self.items[item_name].sell_value
+                self.current_cash += self.items[item_name].value
                 self.player_inventory[item_name] -= 1
                 self.update_inventory_count()
                 return True

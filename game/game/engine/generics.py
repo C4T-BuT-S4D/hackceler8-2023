@@ -176,8 +176,8 @@ class GenericObject(hitbox.Hitbox):
             self.prev_x = self.x
             self.prev_y = self.y
             self.move(
-                round(constants.TICK_S * self.x_speed, 15),
-                round(constants.TICK_S * self.y_speed, 15),
+                round(constants.TICK_S * self.x_speed, 5),
+                round(constants.TICK_S * self.y_speed, 5),
             )
             logging.debug(f"New position is {self.x, self.y}")
 
@@ -224,14 +224,15 @@ class GenericObject(hitbox.Hitbox):
             case "HealthIncreaser":
                 self.increase_health(mod.calculate_effect(mod.benefit, distance))
 
-            case "OneTimeHealthIncreaser":
-                self.increase_health(mod.calculate_effect(mod.benefit, distance))
-
     def decrease_health(self, points):
         logging.debug(f"decreasing {self} health")
         self.health = max(0, min(self.MAX_HEALTH, self.health - points))
+        if self.health <= 0:
+            self.dead = True
 
     def increase_health(self, points):
+        if self.dead:
+            return
         logging.debug(f"regen {self} health")
         self.health = max(0, min(self.MAX_HEALTH, self.health + points))
 

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from engine import generics
-from engine import hitbox
 from engine import modifier
 
 
@@ -23,23 +22,3 @@ class Fountain(generics.GenericObject):
         self.modifier = modifier.HealthIncreaser(min_distance=min_distance, benefit=0.5)
         self.sprite.set_animation("idle")
         self.name = "Fire"
-
-
-class OneTimeFountain(generics.GenericObject):
-    def __init__(self, coords, size, min_distance, benefit):
-        benefit = 1000
-        self.perimeter = [
-            hitbox.Point(coords.x, coords.y),
-            hitbox.Point(coords.x + size.width, coords.y),
-            hitbox.Point(coords.x + size.width, coords.y - size.height),
-            hitbox.Point(coords.x, coords.y - size.height),
-        ]
-        super().__init__(coords, "OneTimeFountain", None, self.perimeter)
-        self.modifier = modifier.OneTimeHealthIncreaser(
-            min_distance=min_distance, benefit=benefit
-        )
-        self.benefit = benefit
-        self.name = "OneTimeFountain"
-
-    def reset(self):
-        self.modifier.benefit = self.benefit
