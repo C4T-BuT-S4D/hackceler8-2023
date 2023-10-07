@@ -28,7 +28,7 @@ def perform_ssl_handshake(
     sock, cert, ca, is_server, expected_cn=None, keylog_filename=None
 ):
     if os.getenv("GAME_LOCAL") == "t":
-        return
+        return sock
 
     logging.info(f"Performing SSL handshake, cert={cert}, ca={ca}")
     if is_server:
