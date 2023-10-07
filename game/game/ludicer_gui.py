@@ -19,6 +19,7 @@ import logging
 import os
 import shutil
 import time
+import threading
 import traceback
 import uuid
 
@@ -713,6 +714,10 @@ class Hackceler8(arcade.Window):
             arcade.key.LOPTION,
             arcade.key.LCOMMAND,
             arcade.key.TAB,
+            arcade.key.RCTRL,
+            arcade.key.RALT,
+            arcade.key.ROPTION,
+            arcade.key.RCOMMAND,
         }:
             return
 
@@ -1105,10 +1110,26 @@ class Hackceler8(arcade.Window):
                 print("path found", [x[:2] for x in path])
 
     def save_recording(self):
-        filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
-        path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
-        with open(path, "w") as f:
+        recordings_dir = os.path.join(
+            os.path.dirname(__file__),
+            "cheats",
+            "recordings",
+        )
+        os.makedirs(recordings_dir, exist_ok=True)
+
+        savename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}"
+
+        with open(os.path.join(recordings_dir, f"{savename}.json"), "w") as f:
             json.dump(self.game.current_recording, f, indent=2)
+
+        screenshot = arcade.draw_commands.get_image(x=0, y=0, width=None, height=None)
+
+        t = threading.Thread(
+            target=lambda: screenshot.save(
+                os.path.join(recordings_dir, f"{savename}.png")
+            )
+        )
+        t.start()
 
         self.last_save = time.time()
 
