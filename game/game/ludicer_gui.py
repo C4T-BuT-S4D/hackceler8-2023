@@ -638,12 +638,19 @@ class Hackceler8(arcade.Window):
             and time.time() - self.last_save > get_settings()["auto_recording_interval"]
             and self.game.current_recording
         ):
-            self.save_recording()
+            self.save_recording(suffix="auto")
 
         if self.slow_ticks_mode:
             return
 
+        saved_map = self.game.current_map
         self.tick_game_with_movement_and_shooting()
+        if self.recording_enabled:
+            if self.game.current_map != saved_map:
+                self.save_recording(current_map=saved_map, suffix="map-change")
+            elif self.player and self.player.dead:
+                self.save_recording(suffix="death")
+
         self.center_camera_to_player()
 
     def closest_shootable_weapon(self) -> int:
@@ -723,13 +730,12 @@ class Hackceler8(arcade.Window):
 
         if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
             if self.recording_enabled:
-                self.recording_enabled = False
-                self.reset_recording()
+                self.stop_recording()
                 return
 
             self.recording_enabled = True
             self.last_save = time.time()
-            self.game.current_recording = []
+            self.reset_recording()
             self.ticks_to_apply = [
                 TickData(
                     keys=[arcade.key.R],
@@ -740,7 +746,7 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
-            self.save_recording()
+            self.save_recording(suffix="manual")
             return
 
         if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
@@ -1109,7 +1115,10 @@ class Hackceler8(arcade.Window):
 
                 print("path found", [x[:2] for x in path])
 
-    def save_recording(self):
+    def save_recording(self, current_map=None, suffix=None):
+        if current_map is None:
+            current_map = self.game.current_map
+
         recordings_dir = os.path.join(
             os.path.dirname(__file__),
             "cheats",
@@ -1117,7 +1126,9 @@ class Hackceler8(arcade.Window):
         )
         os.makedirs(recordings_dir, exist_ok=True)
 
-        savename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}"
+        savename = f"{self.game.current_map}_{datetime.datetime.now().isoformat()}_{self.game.tics:05}"
+        if suffix:
+            savename += f"_{suffix}"
 
         with open(os.path.join(recordings_dir, f"{savename}.json"), "w") as f:
             json.dump(self.game.current_recording, f, indent=2)
@@ -1135,7 +1146,7 @@ class Hackceler8(arcade.Window):
 
     def load_recording(self):
         # filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
-        filename = "base-2023-10-07T18:29:49.295629-00964.json"
+        filename = "cctv-2023-10-07T20:07:19.897857-03350.json"
         path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
         with open(path, "r") as f:
             data = json.load(f)
@@ -1148,6 +1159,17 @@ class Hackceler8(arcade.Window):
             )
             for tick in data
         ]
+        self.ticks_to_apply.append(
+            TickData(
+                keys=[arcade.key.P],
+                random_seed=0,
+                force_keys=True,
+            )
+        )
 
     def reset_recording(self):
         self.game.current_recording = []
+
+    def stop_recording(self):
+        self.recording_enabled = False
+        self.reset_recording()

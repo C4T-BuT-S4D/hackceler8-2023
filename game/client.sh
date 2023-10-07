@@ -6,7 +6,7 @@ source env/bin/activate
 python3 -m pip install -r game/requirements.txt
 
 cd ../cheats-rust
-maturin build --profile opt
+maturin build --profile opt -i "$(which python3)"
 pip install target/wheels/*
 cd ../game
 
