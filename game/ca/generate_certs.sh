@@ -17,7 +17,7 @@ set -euo pipefail
 
 # 1024 / 2048 / 4096
 KEY_LENGTH=2048
-TEAMS=("Maple Mallard Magistrates" "DiceGang" "Blue Water" "Kalmarunionen" "WreckZeroBytes" "C4T BuT S4D" "Dragon Sector" "organizers")
+TEAMS=("team6")
 
 CA_CERT="CA-devel.crt"
 CA_KEY="CA-devel.key"
@@ -65,14 +65,14 @@ if [[ ! -f "${CA_KEY}" ]]; then
   exit 1
 fi;
 
-mkdir -p teams
+# mkdir -p teams
 
 # Generate team certificates
 for team_nr in "${!TEAMS[@]}"; do
   team=${TEAMS[${team_nr}]}
-  generate_cert "team${team_nr}" "teams/${team}"
+  generate_cert "${team}" "${team}"
 done;
 
 # Generate server certificate
-generate_cert "prod-server" "prod-server"
+# generate_cert "prod-server" "prod-server"
 
