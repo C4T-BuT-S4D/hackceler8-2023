@@ -94,7 +94,7 @@ def run_cheats_server(port: int) -> threading.Thread:
         if chosen_map is not None:
             map_recordings = recordings_by_map.get(chosen_map)
         if map_recordings is not None:
-            map_recordings = sorted(map_recordings)
+            map_recordings = sorted(map_recordings, reverse=True)
 
         chosen_recording = request.args.get("recording")
         if (
