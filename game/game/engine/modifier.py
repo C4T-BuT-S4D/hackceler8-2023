@@ -36,11 +36,3 @@ class HealthIncreaser(Modifier):
     def __init__(self, min_distance, benefit):
         super().__init__(min_distance, True)
         self.benefit = benefit
-
-
-class OneTimeHealthIncreaser(HealthIncreaser):
-    def calculate_effect(self, effect, distance):
-        result = super().calculate_effect(effect, distance)
-        if result > 0:
-            self.benefit = 0
-        return result

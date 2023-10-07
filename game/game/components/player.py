@@ -49,7 +49,6 @@ class Player(generics.GenericObject):
         self.last_movement = None
         self.running = False
         self.platformer_rules = False
-        self.danmaku_rules = False
         self.allowed_directions = set()
         self.reset_movements()
         self.jump_override = False
@@ -95,7 +94,6 @@ class Player(generics.GenericObject):
             return
 
         self.running = False
-
         if self.can_control_movement:
             sprinting = arcade.key.LSHIFT in pressed_keys
             if (arcade.key.D in pressed_keys) and (arcade.key.A not in pressed_keys):
@@ -139,16 +137,12 @@ class Player(generics.GenericObject):
         self.direction = direction
 
         speed_multplier = 1
-        if self.danmaku_rules:
-            # in danmaku, sprinting is "focusing"
-            speed_multplier = 0.85 if sprinting else 2
-        else:
-            if not self.platformer_rules or (
-                self.direction == self.DIR_E or self.direction == self.DIR_W
-            ):
-                if sprinting:
-                    speed_multplier = self.speed_multiplier
-                    self.running = True
+        if not self.platformer_rules or (
+            self.direction == self.DIR_E or self.direction == self.DIR_W
+        ):
+            if sprinting:
+                speed_multplier = self.speed_multiplier
+                self.running = True
 
         if self.direction == self.DIR_E or self.direction == self.DIR_W:
             self.face_towards = direction
