@@ -43,7 +43,6 @@ class Portal(generics.GenericObject):
         self.usage_count = 0
 
     def draw(self):
-        return
         r = self.size.width // 2
         arcade.draw_circle_outline(
             self.x + r, self.y - r, r * 1.2, arcade.csscolor.BLUE, border_width=5

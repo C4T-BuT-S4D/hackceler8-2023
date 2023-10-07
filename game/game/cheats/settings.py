@@ -8,6 +8,7 @@ from wtforms import FloatField
 from wtforms import IntegerField
 from wtforms import StringField
 from wtforms import SubmitField
+from wtforms import TextAreaField
 
 
 class Settings(FlaskForm):
@@ -86,6 +87,24 @@ class Settings(FlaskForm):
         default=1,
         label="Slow ticks count",
         description="Number of ticks to emulate in slow_ticks_mode",
+    )
+
+    keys_to_press = TextAreaField(
+        default="",
+        label="Keys to press",
+        description="Keys to press in JSON format",
+    )
+
+    cancel_macro_on_key_press = BooleanField(
+        default=False,
+        label="Cancel macros on key",
+        description="Cancel macros when any key is pressed",
+    )
+
+    random_seed = IntegerField(
+        default=0,
+        label="Random seed",
+        description="Random seed for the game",
     )
 
     submit_button = SubmitField("Submit Form")

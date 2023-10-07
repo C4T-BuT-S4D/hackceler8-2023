@@ -11,16 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
 import os
 import shutil
 import time
+import traceback
 import uuid
+import ast
 
 import arcade
 import cheats_rust
 import pyglet
+import pyglet.media
 from arcade import gui
 from PIL import Image
 from pyglet.image import load as pyglet_load
@@ -62,7 +64,8 @@ class Hackceler8(arcade.Window):
         self.main_menu_manager.enable()
 
         self.force_movement_keys = []
-        self.force_movement_keys_per_frame = 1
+
+        self.add_movement_keys = []
 
         self.num_weapon_shifts = -1
         self.auto_weapon_shooting = False
@@ -83,6 +86,7 @@ class Hackceler8(arcade.Window):
         self.show_menu()
 
         self.slow_ticks_mode = False
+        logging.info("Using audio driver {}".format(pyglet.media.get_audio_driver()))
 
     def show_menu(self):
         self.main_menu_manager.enable()
@@ -282,6 +286,11 @@ class Hackceler8(arcade.Window):
 
         if self.game.textbox is not None:
             self.game.textbox.draw()
+        if self.game.jam_session is not None:
+            self.game.jam_session.draw()
+            self.camera.use()
+            self.game.jam_session.draw_notes()
+            self.gui_camera.use()
         if self.game.map_switch is not None:
             self.game.map_switch.draw()
 
@@ -370,7 +379,10 @@ class Hackceler8(arcade.Window):
                 case "Enemy":
                     color = arcade.color.RED_DEVIL
                 case "Spike":
-                    color = arcade.color.RED_DEVIL
+                    if o.on:
+                        color = arcade.color.RED_DEVIL
+                    else:
+                        color = arcade.color.PALE_RED_VIOLET
                 case "SpeedTile":
                     color = arcade.color.BLUE_GREEN
                 case "Switch":
@@ -404,9 +416,10 @@ class Hackceler8(arcade.Window):
                     )
 
                 if cheats_settings["draw_names"] and o.nametype not in {"Wall"}:
-                    arcade.draw_text(
-                        f"{o.nametype} | {o.name}", rect.x1(), rect.y2() + 6, color
-                    )
+                    text = f"{o.nametype} | {o.name}"
+                    if hasattr(o, "health"):
+                        text += f" | {o.health}"
+                    arcade.draw_text(text, rect.x1(), rect.y2() + 6, color)
 
                 if cheats_settings["draw_lines"]:
                     if o.nametype == "Item":
@@ -538,6 +551,16 @@ class Hackceler8(arcade.Window):
                 self.num_weapon_shifts = min_index
 
     def tick_game_with_movement_and_shooting(self):
+        keys_to_restore = None
+        if self.force_movement_keys:
+            keys_to_restore = self.game.raw_pressed_keys.copy()
+            self.game.raw_pressed_keys = set(self.force_movement_keys[0])
+            self.force_movement_keys = self.force_movement_keys[1:]
+        elif self.add_movement_keys:
+            keys_to_restore = self.game.raw_pressed_keys.copy()
+            self.game.raw_pressed_keys |= set(self.add_movement_keys[0])
+            self.add_movement_keys = self.add_movement_keys[1:]
+
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
@@ -566,6 +589,8 @@ class Hackceler8(arcade.Window):
             move = cheats_rust.Move.NONE
         else:
             self.tick_game_with_shooting()
+            if keys_to_restore is not None:
+                self.game.raw_pressed_keys = keys_to_restore
             return
 
         if get_settings()["validate_transitions"]:
@@ -574,6 +599,9 @@ class Hackceler8(arcade.Window):
             )
 
         self.tick_game_with_shooting()
+
+        if keys_to_restore is not None:
+            self.game.raw_pressed_keys = keys_to_restore
 
         if get_settings()["validate_transitions"]:
             attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
@@ -598,20 +626,7 @@ class Hackceler8(arcade.Window):
         if self.slow_ticks_mode:
             return
 
-        if self.force_movement_keys:
-            for keys, state in self.force_movement_keys[
-                : self.force_movement_keys_per_frame
-            ]:
-                self.game.raw_pressed_keys = keys
-                self.tick_game_with_movement_and_shooting()
-
-            self.force_movement_keys = self.force_movement_keys[
-                self.force_movement_keys_per_frame :
-            ]
-            self.game.raw_pressed_keys = set()
-        else:
-            self.tick_game_with_movement_and_shooting()
-
+        self.tick_game_with_movement_and_shooting()
         self.center_camera_to_player()
 
     def closest_shootable_weapon(self) -> int:
@@ -680,6 +695,35 @@ class Hackceler8(arcade.Window):
             self.slow_ticks_mode = not self.slow_ticks_mode
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
+
+        if symbol == arcade.key.V:
+            settings = get_settings()
+            keys_to_press = settings["keys_to_press"]
+            if not keys_to_press:
+                return
+
+            keys_to_press = ast.literal_eval(keys_to_press)
+            try:
+                self.add_movement_keys = []
+                for keys in keys_to_press:
+                    # keys: str (single symbol)
+                    # keys: list[str] (multiple symbols)
+                    # keys: list[int]
+                    if isinstance(keys, str):
+                        keys = keys.split(",")
+                    # keys: list[str] (multiple symbols)
+                    # keys: list[int]
+
+                    cur_keys = set()
+                    for key in keys:
+                        if isinstance(key, str):
+                            key = getattr(arcade.key, key)
+                        cur_keys.add(key)
+                    self.add_movement_keys.append(cur_keys)
+            except Exception as e:
+                print(f"bad keys: {keys_to_press}: {e}\n{traceback.format_exc()}")
+            finally:
+                return
 
         # enable automatic shooting which will always select the next
         # weapon to shoot once we've shot the current one
@@ -767,6 +811,9 @@ class Hackceler8(arcade.Window):
 
         if self.force_movement_keys:
             self.force_movement_keys = []
+
+        if self.add_movement_keys and get_settings()["cancel_macro_on_key_press"]:
+            self.add_movement_keys = []
 
         self.game.raw_pressed_keys.add(symbol)
 
@@ -972,6 +1019,6 @@ class Hackceler8(arcade.Window):
                     if shift:
                         moves.add(arcade.key.LSHIFT)
 
-                    self.force_movement_keys.append((moves, state))
+                    self.force_movement_keys.append(moves)
 
                 print("path found", [x[:2] for x in path])

@@ -26,8 +26,6 @@ from engine.quadtree import Bounds
 
 
 class GenericObject(hitbox.Hitbox):
-    MAX_HEALTH = 100
-
     def __init__(
         self,
         coords: hitbox.Point,
@@ -226,7 +224,7 @@ class GenericObject(hitbox.Hitbox):
 
     def decrease_health(self, points):
         logging.debug(f"decreasing {self} health")
-        self.health = max(0, min(self.MAX_HEALTH, self.health - points))
+        self.health = max(0, min(100, self.health - points))
         if self.health <= 0:
             self.dead = True
 
@@ -234,7 +232,7 @@ class GenericObject(hitbox.Hitbox):
         if self.dead:
             return
         logging.debug(f"regen {self} health")
-        self.health = max(0, min(self.MAX_HEALTH, self.health + points))
+        self.health = max(0, min(100, self.health + points))
 
     def dump(self):
         if self._dump is not None:
