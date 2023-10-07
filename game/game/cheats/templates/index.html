@@ -1,18 +1,18 @@
-{% import "bootstrap/wtf.html" as wtf %}
-{% extends "bootstrap/base.html" %}
+{% import "wtf.jinja" as wtf %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="abobus">
-    {{ wtf.quick_form(form, button_map={'submit_button': 'primary'}) }}
-</div>
-<div class="abobus">
-    <a href="{{ url_for('map') }}">Map</a>
-    <span> | </span>
-    <a href="{{ url_for('autoindex') }}">Map history</a>
-</div>
-<style>
-    .abobus {
-        padding: 10px;
-    }
-</style>
+<form method="post" class="form is-flex is-flex-direction-row">
+    <button type="submit" class="button is-primary mx-2" style="display: block; width: 4rem; height: 100vh; position: sticky; top: 0;">
+        <span style="writing-mode: vertical-lr; text-orientation: upright;" class="is-size-4">Update settings</span>
+    </button>
+    <div class="is-flex is-flex-direction-row is-flex-wrap-wrap is-justify-content-space-evenly" style="gap: 1rem;">
+    {%- for form in forms %}
+        <div class="box" style="width: 24rem; margin: 0; padding: 1rem;">
+        <h3 class="title is-3" style="margin-bottom: 0.75rem;">{{ form.title }}</h3>
+        {{ wtf.quick_form(form, button_map={'submit_button': 'primary'}) }}
+        </div>
+    {%- endfor %}
+    </div>
+</form>
 {% endblock %}

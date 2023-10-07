@@ -1,0 +1,73 @@
+{% import "wtf.jinja" as wtf %}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form is-flex is-flex-direction-row is-justify-content-space-evenly">
+  <div style="width: 32rem;">
+    <div class="field">
+      <label class="label">Map</label>
+      <div class="control">
+        <select class="select" style="width: 100%;" id="mapselect">
+          {%- for map in maps %}
+            {%- if map == chosen_map %}
+              <option selected>{{ map }}</option>
+            {%- else %}
+              <option>{{ map }}</option>
+            {%- endif %}
+          {%- endfor %}
+        </select>
+      </div>
+    </div>
+    {%- if map_recordings is not none %}
+      <div class="field">
+        <label class="label">Recording</label>
+        <div class="control">
+          <select class="select" style="width: 100%; height: 100%;" id="recordingselect" size="10">
+            {%- for recording in map_recordings %}
+              {%- if recording == chosen_recording %}
+                <option selected>{{ recording }}</option>
+              {%- else %}
+                <option>{{ recording }}</option>
+              {%- endif %}
+            {%- endfor %}
+          </select>
+        </div>
+      </div>
+    {%- endif %}
+    {%- if screenshot_name is not none %}
+      <div class="field">
+        <label class="label">Recording</label>
+        <div class="control">
+          <img src="/recordings/{{ screenshot_name }}" />
+        </div>
+      </div>
+    {%- endif %}
+    <form method="POST" class="field">
+      <div class="control">
+        <button type="submit" class="button is-primary" style="width: 100%;">
+          <span class="is-size-4">Choose recording</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const currentParams = new URLSearchParams(location.search.slice(1));
+
+    document.getElementById("recordingselect").focus();
+
+    document.getElementById("mapselect").addEventListener("change", (event) => {
+      currentParams.set("map", event.target.value);
+      currentParams.delete("recording");
+      location.search = currentParams.toString();
+    });
+
+    document.getElementById("recordingselect").addEventListener("change", (event) => {
+      currentParams.set("recording", event.target.value);
+      location.search = currentParams.toString();
+    });
+  })
+</script>
+{% endblock %}

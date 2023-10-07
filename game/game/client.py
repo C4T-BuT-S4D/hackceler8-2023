@@ -19,6 +19,7 @@ import log
 import ludicer_gui
 import network
 from cheats.server import run_cheats_server
+from cheats.settings import init_settings
 
 
 def main():
@@ -52,6 +53,7 @@ def main():
     logging.getLogger("arcade").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)
 
+    init_settings()
     run_cheats_server(args.cheats_port)
 
     net = None

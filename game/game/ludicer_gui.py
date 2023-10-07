@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import shutil
+import threading
 import time
 import traceback
 import uuid
@@ -37,6 +38,7 @@ from cheats.lib.tick_data import TickData
 from cheats.maps import render_finish
 from cheats.maps import render_requested
 from cheats.settings import get_settings
+from cheats.settings import update_settings
 from map_loading.maps import GameMode
 
 SCREEN_TITLE = "Hackceler8-23"
@@ -438,6 +440,8 @@ class Hackceler8(arcade.Window):
                     if hasattr(o, "health"):
                         text += f" | {o.health}"
                     arcade.draw_text(text, rect.x1(), rect.y2() + 6, color)
+                    if o.nametype == "Spike":
+                        text += f" | {o.tic}"
 
                 if cheats_settings["draw_lines"]:
                     if o.nametype == "Item":
@@ -574,7 +578,7 @@ class Hackceler8(arcade.Window):
             tick_to_apply = self.ticks_to_apply.pop(0)
             keys_to_restore = self.game.raw_pressed_keys.copy()
 
-            self.game.random_seed = tick_to_apply.random_seed
+            self.game.force_random_seed = tick_to_apply.random_seed
 
             if tick_to_apply.force_keys:
                 self.game.raw_pressed_keys = set(tick_to_apply.keys)
@@ -611,6 +615,7 @@ class Hackceler8(arcade.Window):
             self.tick_game_with_shooting()
             if keys_to_restore is not None:
                 self.game.raw_pressed_keys = keys_to_restore
+                self.game.force_random_seed = None
             return
 
         if get_settings()["validate_transitions"]:
@@ -622,6 +627,7 @@ class Hackceler8(arcade.Window):
 
         if keys_to_restore is not None:
             self.game.raw_pressed_keys = keys_to_restore
+            self.game.force_random_seed = None
 
         if get_settings()["validate_transitions"]:
             attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
@@ -732,17 +738,20 @@ class Hackceler8(arcade.Window):
             arcade.key.LOPTION,
             arcade.key.LCOMMAND,
             arcade.key.TAB,
+            arcade.key.RCTRL,
+            arcade.key.RALT,
+            arcade.key.ROPTION,
+            arcade.key.RCOMMAND,
         }:
             return
 
         if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
             if self.recording_enabled:
+                self.save_recording(suffix="end-recording")
                 self.stop_recording()
                 return
 
-            self.recording_enabled = True
-            self.last_save = time.time()
-            self.reset_recording()
+            self.start_recording()
             self.ticks_to_apply = [
                 TickData(
                     keys=[arcade.key.R],
@@ -757,6 +766,12 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
+            if not (
+                modifiers & arcade.key.MOD_OPTION or modifiers & arcade.key.MOD_ALT
+            ):
+                self.stop_recording()
+                self.start_recording()
+
             self.load_recording()
             return
 
@@ -816,7 +831,7 @@ class Hackceler8(arcade.Window):
                         )
                     )
             except Exception as e:
-                print(f"bad macros: {macros}: {e}\n{traceback.format_exc()}")
+                logging.error(f"bad macros: {macros}: {e}\n{traceback.format_exc()}")
             finally:
                 return
 
@@ -854,17 +869,27 @@ class Hackceler8(arcade.Window):
         if self.game.danmaku_system and auto_weapon_shooting_keys:
             self.auto_danmaku_shooting = not self.auto_danmaku_shooting
 
-        if (
-            self.slow_ticks_mode
-            and symbol == arcade.key.BACKSPACE
-            and self.game is not None
-        ):
+        if self.slow_ticks_mode and symbol == arcade.key.BACKSLASH and self.game:
+            self.slow_ticks_mode = False
+            self.on_update(0)
+            self.slow_ticks_mode = True
+
+            print(
+                f"[BL] player state: {self.game.player.x=} {self.game.player.y=} "
+                f"{self.game.player.x_speed=} {self.game.player.y_speed=} {self.game.player.push_speed=} "
+                f"{self.game.player.in_the_air=} {self.game.player.dead=} "
+                f"{self.game.player.health=} "
+            )
+
+            return
+
+        if self.slow_ticks_mode and symbol == arcade.key.BACKSPACE and self.game:
             for _ in range(get_settings()["slow_ticks_count"]):
                 self.tick_game_with_movement_and_shooting()
 
             self.center_camera_to_player()
             print(
-                f"player state: {self.game.player.x=} {self.game.player.y=} "
+                f"[BS] player state: {self.game.player.x=} {self.game.player.y=} "
                 f"{self.game.player.x_speed=} {self.game.player.y_speed=} {self.game.player.push_speed=} "
                 f"{self.game.player.in_the_air=} {self.game.player.dead=} "
                 f"{self.game.player.health=} "
@@ -1126,25 +1151,48 @@ class Hackceler8(arcade.Window):
         if current_map is None:
             current_map = self.game.current_map
 
-        filename = (
-            f"{current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}"
+        recordings_dir = os.path.join(
+            os.path.dirname(__file__),
+            "cheats",
+            "recordings",
+        )
+        os.makedirs(recordings_dir, exist_ok=True)
+
+        savename = (
+            f"{current_map}_{datetime.datetime.now().isoformat()}_{self.game.tics:05}"
         )
         if suffix:
-            filename += f"-{suffix}"
-        filename += ".json"
+            savename += f"_{suffix}"
 
-        path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
-        with open(path, "w") as f:
+        with open(os.path.join(recordings_dir, f"{savename}.json"), "w") as f:
             json.dump(self.game.current_recording, f, indent=2)
+
+        screenshot = arcade.draw_commands.get_image(x=0, y=0, width=None, height=None)
+
+        t = threading.Thread(
+            target=lambda: screenshot.save(
+                os.path.join(recordings_dir, f"{savename}.png")
+            )
+        )
+        t.start()
 
         self.last_save = time.time()
 
     def load_recording(self):
-        # filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
-        filename = "cctv-2023-10-07T20:07:19.897857-03350.json"
+        filename = get_settings()["recording_filename"]
+        if filename is None:
+            logging.warn("No recording chosen")
+            return
+
+        update_settings(lambda s: s.update(recording_filename=None))
         path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
-        with open(path, "r") as f:
-            data = json.load(f)
+
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            logging.error(f"failed to load recording: {e}\n{traceback.format_exc()}")
+            return
 
         self.ticks_to_apply = [
             TickData(
@@ -1162,9 +1210,21 @@ class Hackceler8(arcade.Window):
             )
         )
 
+        while (
+            len(self.ticks_to_apply) > 1
+            and self.ticks_to_apply[0].keys == [arcade.key.R]
+            and self.ticks_to_apply[1].keys == [arcade.key.R]
+        ):
+            self.ticks_to_apply = self.ticks_to_apply[1:]
+
     def reset_recording(self):
         self.game.current_recording = []
 
     def stop_recording(self):
         self.recording_enabled = False
+        self.reset_recording()
+
+    def start_recording(self):
+        self.recording_enabled = True
+        self.last_save = time.time()
         self.reset_recording()

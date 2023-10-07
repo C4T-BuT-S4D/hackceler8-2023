@@ -1,57 +1,33 @@
+import logging
 from copy import deepcopy
 from threading import RLock
 from typing import Callable
 
-from flask_wtf import FlaskForm
 from wtforms import BooleanField
 from wtforms import FloatField
+from wtforms import Form
 from wtforms import IntegerField
 from wtforms import StringField
-from wtforms import SubmitField
 from wtforms import TextAreaField
 
 
-class Settings(FlaskForm):
-    timeout = IntegerField(
-        default=5,
-        label="Timeout",
+class MacrosSettings(Form):
+    title = "Macros"
+
+    macros = TextAreaField(
+        default="",
+        label="Macros",
+        description="Array of up to 9 macros",
     )
 
-    always_shift = BooleanField(
+    cancel_macro_on_key_press = BooleanField(
         default=True,
-        label="Always shift",
-        description="Speeds up search",
+        label="Cancel macros on keypress",
     )
 
-    disable_shift = BooleanField(
-        default=False,
-        label="Disable shift",
-        description="Disables shift",
-    )
 
-    allowed_moves = StringField(
-        default="all",
-        label="Allowed moves",
-        description="Allowed moves in search, use to limit search space",
-    )
-
-    heuristic_weight = FloatField(
-        default=1,
-        label="Heuristic weight",
-        description="Weight of heuristic in A* search",
-    )
-
-    simple_geometry = BooleanField(
-        default=False,
-        label="Simple geometry",
-        description="Only use integer height/width in state",
-    )
-
-    state_batch_size = IntegerField(
-        default=50000,
-        label="State batch size",
-        description="Number of states to process in one batch in parallel",
-    )
+class RenderingAndExtraSettings(Form):
+    title = "Rendering & Extra"
 
     object_hitbox = IntegerField(
         default=3,
@@ -59,46 +35,25 @@ class Settings(FlaskForm):
         description="Width of object hitbox in pixels",
     )
 
-    extend_deadly_hitbox = IntegerField(
-        default=1,
-        label="Extend deadly hitbox",
-        description="Extend deadly hitbox by this amount of pixels",
-    )
-
-    validate_transitions = BooleanField(
-        default=False,
-        label="Validate transitions",
-        description="Validate transitions with rust",
-    )
-
     draw_names = BooleanField(
-        default=True, label="Draw names", description="Draw objects names"
+        default=False,
+        label="Draw object names",
     )
 
     draw_boxes = BooleanField(
-        default=True, label="Draw boxes", description="Draw objects boxes"
+        default=True,
+        label="Draw object boxes",
     )
 
     draw_lines = BooleanField(
-        default=True, label="Draw lines", description="Draw lines to important objects"
+        default=True,
+        label="Draw lines",
     )
 
     slow_ticks_count = IntegerField(
         default=1,
         label="Slow ticks count",
         description="Number of ticks to emulate in slow_ticks_mode",
-    )
-
-    macros = TextAreaField(
-        default="",
-        label="Macros",
-        description="Macros in Python format",
-    )
-
-    cancel_macro_on_key_press = BooleanField(
-        default=True,
-        label="Cancel macros on key",
-        description="Cancel macros when any key is pressed",
     )
 
     random_seed = IntegerField(
@@ -113,11 +68,74 @@ class Settings(FlaskForm):
         description="Interval between auto recordings in seconds",
     )
 
-    submit_button = SubmitField("Submit Form")
 
+class PathfindingSettings(Form):
+    title = "Pathfinding"
+
+    timeout = IntegerField(
+        default=5,
+        label="Timeout",
+    )
+
+    allowed_moves = StringField(
+        default="all",
+        label="Allowed moves",
+        description="Allowed moves in search, use to limit search space",
+    )
+
+    heuristic_weight = FloatField(
+        default=1,
+        label="Heuristic weight",
+        description="Weight of heuristic in A* search",
+    )
+
+    state_batch_size = IntegerField(
+        default=50000,
+        label="State batch size",
+        description="Number of states to process in one batch in parallel",
+    )
+
+    extend_deadly_hitbox = IntegerField(
+        default=1,
+        label="Extend deadly hitbox",
+        description="Extend deadly hitbox by this amount of pixels",
+    )
+
+    always_shift = BooleanField(
+        default=True,
+        label="Always shift",
+    )
+
+    disable_shift = BooleanField(
+        default=False,
+        label="Disable shift",
+    )
+
+    simple_geometry = BooleanField(
+        default=False,
+        label="Simple geometry",
+        description="Only use integer height/width in state",
+    )
+
+    validate_transitions = BooleanField(
+        default=False,
+        label="Validate transitions",
+    )
+
+
+settings_forms = [MacrosSettings, RenderingAndExtraSettings, PathfindingSettings]
 
 __lock: RLock = RLock()
-__settings: dict = dict()
+__settings: dict = {"recording_filename": None}
+
+
+def init_settings():
+    forms = [form() for form in settings_forms]
+    data = dict()
+    for form in forms:
+        data.update(**deepcopy(form.data))
+    logging.info(f"Initial settings: {data}")
+    update_settings(lambda s: s.update(**data))
 
 
 def get_settings() -> dict:

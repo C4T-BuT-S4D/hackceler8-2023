@@ -14,7 +14,6 @@
 
 import json
 import logging
-import os
 import time
 from copy import copy
 from enum import Enum
@@ -221,6 +220,8 @@ class Ludicer:
 
         # cheat sh[ee]it.
         self.current_recording = []
+
+        self.force_random_seed = None
 
     @property
     def won(self):
@@ -558,9 +559,8 @@ class Ludicer:
             save = {
                 "raw_keys": list(self.raw_pressed_keys),
                 "text_input": self.get_text_input(),
+                "seed": self.rand_seed,
             }
-            if self.rand_seed != 0:
-                save["seed"] = self.rand_seed
             self.current_recording.append(save)
 
         if self.is_server or self.net is None:
@@ -575,10 +575,8 @@ class Ludicer:
             "keys": list(self.pressed_keys),
             "text_input": self.get_text_input(),
             "llm_ack": llm_ack,
+            "seed": self.rand_seed,
         }
-        if self.rand_seed != 0:
-            msg["seed"] = self.rand_seed
-            self.rand_seed = 0
         msg = json.dumps(msg).encode()
         self.net.send_one(msg)
 
@@ -774,14 +772,18 @@ class Ludicer:
 
     def init_random(self):
         if not self.is_server:
-            if seed := get_settings().get("random_seed", None):
-                self.rand_seed = seed
+            if self.force_random_seed is not None:
+                self.rand_seed = self.force_random_seed
                 self.rng_system.seed(self.rand_seed)
                 return
 
-            if self.rand_seed is None:
-                self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
+            if force_seed := get_settings().get("random_seed", None):
+                self.rand_seed = force_seed
                 self.rng_system.seed(self.rand_seed)
+                return
+
+            self.rand_seed = 1337
+            self.rng_system.seed(self.rand_seed)
 
         # Sync seed with client on startup.
         elif self.rand_seed is not None:
