@@ -83,7 +83,7 @@ def run_cheats_server(port: int) -> threading.Thread:
         if chosen_map is None and len(map_names) > 0:
             chosen_map = map_names[0]
 
-        if chosen_map not in map_names:
+        if len(map_names) > 0 and chosen_map not in map_names:
             return redirect(url_for("recordings"))
 
         map_recordings = None
@@ -100,7 +100,7 @@ def run_cheats_server(port: int) -> threading.Thread:
         ):
             chosen_recording = map_recordings[0]
 
-        if chosen_recording not in map_recordings:
+        if map_recordings is not None and chosen_recording not in map_recordings:
             return redirect(url_for("recordings", map=chosen_map))
 
         if request.method == "POST":
@@ -119,7 +119,7 @@ def run_cheats_server(port: int) -> threading.Thread:
             chosen_map=chosen_map,
             map_recordings=map_recordings,
             chosen_recording=chosen_recording,
-            screenshot_src=f"/recordings/{screenshot_name}",
+            screenshot_name=screenshot_name,
         )
 
     @app.get("/map")
