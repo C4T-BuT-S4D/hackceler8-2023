@@ -95,10 +95,10 @@ class Settings(FlaskForm):
         description="Keys to press in JSON format",
     )
 
-    render_keys_to_press = BooleanField(
-        default=True,
-        label="Render `keys_to_press`",
-        description="Render after each tick when keys to press are set",
+    cancel_macro_on_key_press = BooleanField(
+        default=False,
+        label="Cancel macros on key",
+        description="Cancel macros when any key is pressed",
     )
 
     random_seed = IntegerField(

@@ -64,7 +64,8 @@ class Hackceler8(arcade.Window):
         self.main_menu_manager.enable()
 
         self.force_movement_keys = []
-        self.force_movement_keys_per_frame = 1
+
+        self.add_movement_keys = []
 
         self.num_weapon_shifts = -1
         self.auto_weapon_shooting = False
@@ -550,6 +551,16 @@ class Hackceler8(arcade.Window):
                 self.num_weapon_shifts = min_index
 
     def tick_game_with_movement_and_shooting(self):
+        keys_to_restore = None
+        if self.force_movement_keys:
+            keys_to_restore = self.game.raw_pressed_keys.copy()
+            self.game.raw_pressed_keys = set(self.force_movement_keys[0])
+            self.force_movement_keys = self.force_movement_keys[1:]
+        elif self.add_movement_keys:
+            keys_to_restore = self.game.raw_pressed_keys.copy()
+            self.game.raw_pressed_keys |= set(self.add_movement_keys[0])
+            self.add_movement_keys = self.add_movement_keys[1:]
+
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
@@ -578,6 +589,8 @@ class Hackceler8(arcade.Window):
             move = cheats_rust.Move.NONE
         else:
             self.tick_game_with_shooting()
+            if keys_to_restore is not None:
+                self.game.raw_pressed_keys = keys_to_restore
             return
 
         if get_settings()["validate_transitions"]:
@@ -586,6 +599,9 @@ class Hackceler8(arcade.Window):
             )
 
         self.tick_game_with_shooting()
+
+        if keys_to_restore is not None:
+            self.game.raw_pressed_keys = keys_to_restore
 
         if get_settings()["validate_transitions"]:
             attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
@@ -610,20 +626,7 @@ class Hackceler8(arcade.Window):
         if self.slow_ticks_mode:
             return
 
-        if self.force_movement_keys:
-            for keys, state in self.force_movement_keys[
-                : self.force_movement_keys_per_frame
-            ]:
-                self.game.raw_pressed_keys = keys
-                self.tick_game_with_movement_and_shooting()
-
-            self.force_movement_keys = self.force_movement_keys[
-                self.force_movement_keys_per_frame :
-            ]
-            self.game.raw_pressed_keys = set()
-        else:
-            self.tick_game_with_movement_and_shooting()
-
+        self.tick_game_with_movement_and_shooting()
         self.center_camera_to_player()
 
     def closest_shootable_weapon(self) -> int:
@@ -701,6 +704,7 @@ class Hackceler8(arcade.Window):
 
             keys_to_press = ast.literal_eval(keys_to_press)
             try:
+                self.add_movement_keys = []
                 for keys in keys_to_press:
                     # keys: str (single symbol)
                     # keys: list[str] (multiple symbols)
@@ -710,20 +714,15 @@ class Hackceler8(arcade.Window):
                     # keys: list[str] (multiple symbols)
                     # keys: list[int]
 
-                    self.game.raw_pressed_keys = set()
+                    cur_keys = set()
                     for key in keys:
                         if isinstance(key, str):
                             key = getattr(arcade.key, key)
-                        self.game.raw_pressed_keys.add(key)
-
-                    self.game.tick()
-                    if settings["render_keys_to_press"]:
-                        self.on_draw()
-                    time.sleep(pyglet.clock.get_sleep_time(True))
+                        cur_keys.add(key)
+                    self.add_movement_keys.append(cur_keys)
             except Exception as e:
                 print(f"bad keys: {keys_to_press}: {e}\n{traceback.format_exc()}")
             finally:
-                self.game.raw_pressed_keys = set()
                 return
 
         # enable automatic shooting which will always select the next
@@ -812,6 +811,9 @@ class Hackceler8(arcade.Window):
 
         if self.force_movement_keys:
             self.force_movement_keys = []
+
+        if self.add_movement_keys and get_settings()["cancel_macro_on_key_press"]:
+            self.add_movement_keys = []
 
         self.game.raw_pressed_keys.add(symbol)
 
@@ -1017,6 +1019,6 @@ class Hackceler8(arcade.Window):
                     if shift:
                         moves.add(arcade.key.LSHIFT)
 
-                    self.force_movement_keys.append((moves, state))
+                    self.force_movement_keys.append(moves)
 
                 print("path found", [x[:2] for x in path])
