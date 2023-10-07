@@ -2,3 +2,8 @@
 /.idea
 .DS_Store
 __pycache__
+env/
+server-env/
+/game/game/cheats/static/*
+!/game/game/cheats/static/.keep
+/game/game/save_state
