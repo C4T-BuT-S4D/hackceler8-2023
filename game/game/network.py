@@ -27,7 +27,8 @@ from engine.state import SaveFile
 def perform_ssl_handshake(
     sock, cert, ca, is_server, expected_cn=None, keylog_filename=None
 ):
-    if os.getenv("GAME_LOCAL") == "t":
+    if os.getenv("GAME_SSL") == "f":
+        logging.warn("Establishing connection without SSL")
         return sock
 
     logging.info(f"Performing SSL handshake, cert={cert}, ca={ca}")
