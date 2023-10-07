@@ -747,6 +747,7 @@ class Hackceler8(arcade.Window):
 
         if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
             if self.recording_enabled:
+                self.save_recording(suffix="end-recording")
                 self.stop_recording()
                 return
 
