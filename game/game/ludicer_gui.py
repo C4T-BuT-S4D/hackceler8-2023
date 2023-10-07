@@ -707,7 +707,13 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if symbol in {arcade.key.LCTRL, arcade.key.LALT, arcade.key.LOPTION, arcade.key.LCOMMAND, arcade.key.TAB}:
+        if symbol in {
+            arcade.key.LCTRL,
+            arcade.key.LALT,
+            arcade.key.LOPTION,
+            arcade.key.LCOMMAND,
+            arcade.key.TAB,
+        }:
             return
 
         if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
@@ -877,9 +883,9 @@ class Hackceler8(arcade.Window):
 
             self.game.raw_pressed_keys = original_pressed_keys
 
-        if get_settings()["cancel_macro_on_key_press"]:
+        if get_settings()["cancel_macro_on_key_press"] and self.ticks_to_apply:
             self.ticks_to_apply = []
-            print('canceled macro on key press', symbol)
+            print("canceled macro on key press", symbol)
 
         if symbol == arcade.key.M:
             return
