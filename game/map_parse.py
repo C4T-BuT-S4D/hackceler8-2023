@@ -1,4 +1,10 @@
-from map_loading.tilemap import BasicTileMap
+import sys
+import os
+
+gamedir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game")
+sys.path.insert(0,gamedir)
+os.chdir(gamedir)
+
 import ludicer
 lud = ludicer.Ludicer(None, True)
 arenas = lud.arena_mapping
