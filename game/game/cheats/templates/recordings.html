@@ -7,7 +7,7 @@
     <div class="field">
       <label class="label">Map</label>
       <div class="control">
-        <select class="select" style="width: 100%;" id="mapselect">
+        <select class="select baza" style="width: 100%;" id="mapselect">
           {%- for map in maps %}
             {%- if map == chosen_map %}
               <option selected>{{ map }}</option>
@@ -22,7 +22,7 @@
       <div class="field">
         <label class="label">Recording</label>
         <div class="control">
-          <select class="select" style="width: 100%; height: 100%;" id="recordingselect" size="10">
+          <select class="select baza" style="width: 100%; height: 100%;" id="recordingselect" size="10">
             {%- for recording in map_recordings %}
               {%- if recording == chosen_recording %}
                 <option selected>{{ recording }}</option>
