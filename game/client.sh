@@ -15,6 +15,7 @@ if [ "$1" = "local" ]; then
   certpath="../ca/team6"
   capath="../ca/CA-devel.crt"
   standalone=""
+  export GAME_LOCAL="t"
 elif [ "$1" = "remote" ]; then
   hostname="team6.hackceler8-2023.ctfcompetition.com"
   certpath="$HOME/team6"
@@ -25,6 +26,7 @@ elif [ "$1" = "standalone" ]; then
   certpath=""
   capath=""
   standalone="--standalone"
+  export GAME_LOCAL="t"
 else
   echo "Specify local/remote/standalone as first argument"
   exit 1
