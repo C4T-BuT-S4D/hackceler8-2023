@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 from copy import deepcopy
 from threading import RLock
 from typing import Callable
@@ -8,16 +10,29 @@ from wtforms import FloatField
 from wtforms import Form
 from wtforms import IntegerField
 from wtforms import StringField
-from wtforms import TextAreaField
+
+from cheats.lib.macro import Macro
 
 
-class MacrosSettings(Form):
-    title = "Macros"
+class ExtraSettings(Form):
+    title = "Extra"
 
-    macros = TextAreaField(
-        default="",
-        label="Macros",
-        description="Array of up to 9 macros",
+    slow_ticks_count = IntegerField(
+        default=1,
+        label="Slow ticks count",
+        description="Number of ticks to emulate in slow_ticks_mode",
+    )
+
+    random_seed = IntegerField(
+        default=0,
+        label="Random seed",
+        description="Random seed for the game",
+    )
+
+    auto_recording_interval = IntegerField(
+        default=5,
+        label="Auto recording interval",
+        description="Interval between auto recordings in seconds",
     )
 
     cancel_macro_on_key_press = BooleanField(
@@ -26,8 +41,8 @@ class MacrosSettings(Form):
     )
 
 
-class RenderingAndExtraSettings(Form):
-    title = "Rendering & Extra"
+class RenderingSettings(Form):
+    title = "Rendering"
 
     object_hitbox = IntegerField(
         default=3,
@@ -48,24 +63,6 @@ class RenderingAndExtraSettings(Form):
     draw_lines = BooleanField(
         default=True,
         label="Draw lines",
-    )
-
-    slow_ticks_count = IntegerField(
-        default=1,
-        label="Slow ticks count",
-        description="Number of ticks to emulate in slow_ticks_mode",
-    )
-
-    random_seed = IntegerField(
-        default=0,
-        label="Random seed",
-        description="Random seed for the game",
-    )
-
-    auto_recording_interval = IntegerField(
-        default=5,
-        label="Auto recording interval",
-        description="Interval between auto recordings in seconds",
     )
 
 
@@ -123,17 +120,29 @@ class PathfindingSettings(Form):
     )
 
 
-settings_forms = [MacrosSettings, RenderingAndExtraSettings, PathfindingSettings]
+settings_forms = [ExtraSettings, RenderingSettings, PathfindingSettings]
 
 __lock: RLock = RLock()
-__settings: dict = {"recording_filename": None}
+__settings: dict = {
+    "recording_filename": None,
+    "macros": [Macro(name=f"Macro {i + 1}", keys="") for i in range(9)],
+}
 
 
 def init_settings():
     forms = [form() for form in settings_forms]
-    data = dict()
+    data = get_settings()
     for form in forms:
         data.update(**deepcopy(form.data))
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "macros.json")) as f:
+            macros = json.load(f)
+        macros = [Macro(**json.loads(m)) for m in macros]
+        # merge only those macros which exist instead of overwriting
+        for i, macro in enumerate(macros):
+            data["macros"][i] = macro
+    except Exception as e:
+        logging.warning(f"Failed to load macros from macros.json: {e}")
     logging.info(f"Initial settings: {data}")
     update_settings(lambda s: s.update(**data))
 

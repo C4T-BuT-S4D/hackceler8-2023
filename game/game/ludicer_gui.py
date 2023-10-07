@@ -802,17 +802,16 @@ class Hackceler8(arcade.Window):
             if not macros:
                 return
 
-            try:
-                macros = ast.literal_eval(macros)
-                assert isinstance(macros, (list, tuple))
+            macros = [macro.keys for macro in macros]
 
-                keys_to_press = macros[symbol - arcade.key.KEY_1]
+            try:
+                keys_to_press = ast.literal_eval(macros[symbol - arcade.key.KEY_1])
 
                 self.ticks_to_apply = []
                 for keys in keys_to_press:
-                    # keys: str (single symbol)
-                    # keys: list[str] (multiple symbols)
-                    # keys: list[int]
+                    # keys: str (single symbol) 'W,A,S,D' -- 4 separate ticks
+                    # keys: list[str] (multiple symbols) ['W,A,S,D'] -- 4 keys in 1 tick
+                    # keys: list[list[int]]
                     if isinstance(keys, str):
                         keys = keys.split(",")
                     # keys: list[str] (multiple symbols)
