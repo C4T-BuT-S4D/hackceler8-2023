@@ -26,6 +26,7 @@ class Player(generics.GenericObject):
     DIR_W = "W"
     PLATFORMER_TILESET = "resources/character/AnimationSheet_Mew.tmx"
     SCROLLER_TILESET = "resources/character/AnimationSheet_OverheadMew.tmx"
+    MAX_HEALTH = 100
 
     def __init__(self, coords, outline):
         super().__init__(
@@ -49,6 +50,7 @@ class Player(generics.GenericObject):
         self.last_movement = None
         self.running = False
         self.platformer_rules = False
+        self.danmaku_rules = False
         self.allowed_directions = set()
         self.reset_movements()
         self.jump_override = False
@@ -94,7 +96,6 @@ class Player(generics.GenericObject):
             return
 
         self.running = False
-
         if self.can_control_movement:
             sprinting = arcade.key.LSHIFT in pressed_keys
             if (arcade.key.D in pressed_keys) and (arcade.key.A not in pressed_keys):
@@ -138,12 +139,16 @@ class Player(generics.GenericObject):
         self.direction = direction
 
         speed_multplier = 1
-        if not self.platformer_rules or (
-            self.direction == self.DIR_E or self.direction == self.DIR_W
-        ):
-            if sprinting:
-                speed_multplier = self.speed_multiplier
-                self.running = True
+        if self.danmaku_rules:
+            # in danmaku, sprinting is "focusing"
+            speed_multplier = 0.85 if sprinting else 2
+        else:
+            if not self.platformer_rules or (
+                self.direction == self.DIR_E or self.direction == self.DIR_W
+            ):
+                if sprinting:
+                    speed_multplier = self.speed_multiplier
+                    self.running = True
 
         if self.direction == self.DIR_E or self.direction == self.DIR_W:
             self.face_towards = direction
@@ -269,6 +274,6 @@ class Player(generics.GenericObject):
                     logging.info("Speed multiplier permanently increased")
             case "noogler":
                 if not self.jump_bonus:
-                    self.jump_multiplier = 1.2
+                    self.jump_multiplier = 2
                     self.jump_bonus = True
                     logging.info("Jump multiplier permanently increased")

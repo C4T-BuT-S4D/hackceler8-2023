@@ -1192,14 +1192,14 @@
   </object>
  </objectgroup>
  <objectgroup id="4" name="walls">
-  <object id="23" name="speed_arena" class="Wall" x="96.8168" y="672" width="206.843" height="239.417"/>
+  <object id="23" name="zone_c0" class="Wall" x="96.8168" y="672" width="206.843" height="239.417"/>
   <object id="22" name="spike_arena" class="Wall" x="97.0713" y="366.397" width="205.072" height="243.476"/>
   <object id="6" name="purple_arena" class="Wall" x="96" y="96" width="208" height="206.667"/>
   <object id="7" name="red_arena" class="Wall" x="92" y="980.666" width="208" height="206.667"/>
   <object id="8" name="orange_arena" class="Wall" x="978.667" y="95.3332" width="208" height="206.667"/>
   <object id="9" name="violet_arena" class="Wall" x="978.667" y="983.333" width="208" height="206.667"/>
   <object id="10" x="1118.67" y="262.667"/>
-  <object id="16" name="logic_arena" class="Wall" x="363.469" y="94.6667" width="243.198" height="209.301"/>
+  <object id="16" name="zone_a1" class="Wall" x="363.469" y="94.6667" width="243.198" height="209.301"/>
   <object id="17" name="zone_a2" x="673.333" y="94.9208" width="241.333" height="206.412"/>
   <object id="18" name="zone_b2a" x="672" y="364.794" width="79.7608" height="172.802"/>
   <object id="19" name="zone_b3" x="980" y="366.928" width="202.127" height="238.405"/>
@@ -1213,7 +1213,7 @@
   <object id="29" name="zone_d2" x="673.333" y="981.064" width="241.858" height="202.936"/>
   <object id="30" name="zone_d1" x="364.27" y="980" width="242.667" height="204"/>
   <object id="31" name="zone_b2b" x="742.659" y="364.524" width="174.675" height="245.341"/>
-  <object id="40" name="boss_arena" x="544" y="560" width="191.782" height="200"/>
+  <object id="32" name="danmaku_arena" x="545.385" y="559.603" width="190.36" height="200"/>
   <object id="69" name="door_blue" x="640" y="464">
    <point/>
   </object>

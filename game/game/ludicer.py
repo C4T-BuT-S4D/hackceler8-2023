@@ -46,6 +46,7 @@ from engine.state import SaveFile
 from engine.state import check_item_loaded
 from map_loading import maps
 from map_loading.maps import GameMode
+from cheats.settings import get_settings
 
 
 class MagicItem(Enum):
@@ -60,7 +61,7 @@ COLOR_LIST = [
 
 
 class Ludicer:
-    def __init__(self, net, is_server, eager_level_load=True):
+    def __init__(self, net, is_server, debug=False, eager_level_load=True):
         self.mutex = Lock()
         self.net = net
 
@@ -95,9 +96,6 @@ class Ludicer:
 
         self.arena_mapping = {
             "spike_arena": "spike",
-            "speed_arena": "speed",
-            "logic_arena": "logic",
-            "boss_arena": "boss",
             "danmaku_arena": "danmaku",
             "purple_arena": "cctv",
             "red_arena": "rusty",
@@ -142,6 +140,7 @@ class Ludicer:
         self.prerender = None
         self.map_switch = None
         self.textbox = None
+        self.jam_session = None
         self.current_mode = None
         self.state_hash = None
         self.cheating_detected = False
@@ -156,7 +155,6 @@ class Ludicer:
         self.logic_engine = None
         self.danmaku_system = None
         self.grenade_system = None
-        self.brainduck = None
 
         self.boss = None
         self.unlocked_doors = set()
@@ -188,6 +186,22 @@ class Ludicer:
             arcade.key.R,
             arcade.key.P,
             arcade.key.F,
+            # Music
+            arcade.key.ENTER,
+            arcade.key.EQUAL,
+            arcade.key.ESCAPE,
+            arcade.key.KEY_0,
+            arcade.key.KEY_1,
+            arcade.key.KEY_2,
+            arcade.key.KEY_3,
+            arcade.key.KEY_4,
+            arcade.key.KEY_5,
+            arcade.key.KEY_6,
+            arcade.key.KEY_7,
+            arcade.key.KEY_8,
+            arcade.key.KEY_9,
+            arcade.key.MINUS,
+            arcade.key.RETURN,
             # NPC
             arcade.key.E,
             arcade.key.ENTER,
@@ -221,7 +235,7 @@ class Ludicer:
         self.win_timestamp = time.time()
 
     def dump_state(self):
-        h = ""
+        h = self.tiled_map.hck_hash()
         for i in (
             self.objects
             + self.static_objs
@@ -235,7 +249,7 @@ class Ludicer:
 
     # This section needsto be hardcoded for each match
     def get_all_available_items(self):
-        self.boss_danmaku_exists = False
+        self.boss_danmaku_exists = True
         self.boss_llm_exists = True
         # Need to add variable items here
         its = [
@@ -267,10 +281,10 @@ class Ludicer:
                 color="blue",
                 wearable=False,
             ),
-            Item(None, name="goggles", display_name="Goggles", wearable=True),
-            Item(None, name="boots", display_name="Boots", wearable=True),
-            Item(None, name="magnet", display_name="Magnet", wearable=True),
-            Item(None, name="flag_llm", display_name="LLM flag", wearable=False),
+            Item(None, name="noogler", display_name="NooglerHat", wearable=True),
+            Item(
+                None, name="flag_danmaku", display_name="Danmaku flag", wearable=False
+            ),
         ]
 
         for i in its:
@@ -356,7 +370,6 @@ class Ludicer:
         self.physics_engine = None
         self.logic_engine = None
         self.level_modifier = None
-        self.brainduck = None
         self.current_mode = self.maps_dict[self.current_map].game_mode
 
         match self.current_mode:
@@ -446,12 +459,10 @@ class Ludicer:
         self.static_objs = self.tiled_map.static_objs.copy()
         for o in self.static_objs:
             o.reset()
-            if o.nametype == "Brainduck":
-                logging.info("Have Brainduck")
-                self.brainduck = o
 
         self.physics_engine = physics.PhysicsEngine(
             platformer_rules=(self.current_mode == GameMode.MODE_PLATFORMER),
+            danmaku_rules=(self.current_map == "danmaku"),
             objects=[self.player] + self.objects + self.dynamic_artifacts,
             qt=self.tiled_map.qt,
             obj_map=self.tiled_map.obj_map,
@@ -460,16 +471,14 @@ class Ludicer:
         self.physics_engine.env_tiles = self.tiled_map.env_tiles
         self.physics_engine.moving_platforms = self.tiled_map.moving_platforms
 
-        if self.tiled_map.logic_map is not None:
-            self.logic_engine = logic.LogicEngine(self.tiled_map.logic_map)
+        self.logic_engine = logic.LogicEngine(self.tiled_map.logic_map)
 
         logging.debug("Scroller setup complete")
 
     def setup_platformer(self):
         self.setup_scroller()
         self.player.base_y_speed = 320
-        if self.current_map == "cctv":
-            self.level_modifier = Ludifier(self.tiled_map)
+        self.level_modifier = Ludifier(self.tiled_map)
 
     def switch_maps(self, new_map):
         if (new_map == "boss" or new_map == "danmaku") and len(self.unlocked_doors) < 4:
@@ -512,6 +521,7 @@ class Ludicer:
             if arcade.key.E in self.newly_pressed_keys:
                 self.newly_pressed_keys.remove(arcade.key.E)
 
+        self.jam_session = None
         self.textbox = textbox.Textbox(
             self, text, cleanup, choices, free_text, from_llm, process_fun
         )
@@ -536,7 +546,13 @@ class Ludicer:
         Thread(target=_query_llm, args=(text,), daemon=True).start()
 
     def objects_frozen(self):
-        return self.map_switch is not None or self.textbox is not None
+        return any(
+            [
+                self.map_switch,
+                self.textbox,
+                self.jam_session,
+            ]
+        )
 
     def send_game_info(self):
         if self.is_server or self.net is None:
@@ -574,7 +590,7 @@ class Ludicer:
                 "Called set_text_input on client, should only be used on server"
             )
             return
-        if self.textbox is None or self.textbox.text_input is None:
+        if self.textbox is None or not self.textbox.text_input_appeared:
             return
         self.textbox.text_input.text = text
 
@@ -619,7 +635,11 @@ class Ludicer:
         self.dump_state()
 
         self.prev_display_inventory = self.display_inventory
-        if arcade.key.P in self.newly_pressed_keys and self.textbox is None:
+        if (
+            arcade.key.P in self.newly_pressed_keys
+            and self.textbox is None
+            and self.jam_session is None
+        ):
             self.display_inventory = not self.display_inventory
         if self.display_inventory:
             self.inventory.tick(self.newly_pressed_keys)
@@ -652,10 +672,16 @@ class Ludicer:
                 if o.nametype == "Boss":
                     o.sprite.tick()
 
+        was_jam_session = False
+        if self.jam_session is not None:
+            was_jam_session = True
+            self.jam_session.player = self.player
+            self.jam_session.tick(self.pressed_keys, self.newly_pressed_keys)
+
         if self.objects_frozen():
             return self.send_game_info()
 
-        if arcade.key.ESCAPE in self.newly_pressed_keys:
+        if arcade.key.ESCAPE in self.newly_pressed_keys and not was_jam_session:
             self.reset_to_main_map()
         elif arcade.key.R in self.newly_pressed_keys:
             self.reset_current_level()
@@ -668,7 +694,7 @@ class Ludicer:
         if self.grenade_system:
             self.grenade_system.tick(self.newly_pressed_keys)
         if self.danmaku_system:
-            self.danmaku_system.tick(self.pressed_keys)
+            self.danmaku_system.tick(self.pressed_keys, self.newly_pressed_keys)
 
         for o in list(self.objects):
             o.game = self
@@ -717,8 +743,6 @@ class Ludicer:
             self.prev_pressed_keys = self.pressed_keys.copy()
 
         if self.player is not None:
-            if self.brainduck is not None:
-                self.handle_duck_logic()
             self.player.tick(
                 self.pressed_keys,
                 self.newly_pressed_keys,
@@ -742,11 +766,17 @@ class Ludicer:
 
     def init_random(self):
         if not self.is_server:
+            if seed := get_settings().get("random_seed", None):
+                self.rand_seed = seed
+                self.rng_system.seed(self.rand_seed)
+                return
+
             if self.rand_seed is None:
                 self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
                 self.rng_system.seed(self.rand_seed)
+
         # Sync seed with client on startup.
-        elif self.rand_seed is not None and self.tics == 0:
+        elif self.rand_seed is not None:
             self.rng_system.seed(self.rand_seed)
             self.rand_seed = None
 
@@ -837,20 +867,14 @@ class Ludicer:
                         self.player.in_the_air = True
                         return
 
-                    case "Brainduck":
-                        self.activate_duck_mode()
-
-                    case "Duck":
-                        self.duck_collision(o)
-
         for o in self.objects:
             if o.blocking:
                 if o.get_rect().expand(2).collides(self.player.get_rect()):
                     match o.nametype:
                         case "Door":
                             logging.info(f"Collision between player and {o.name}")
+                            arcade.play_sound(self.jump_sound)
                             if o.passthrough(self.items):
-                                arcade.play_sound(self.jump_sound)
                                 logging.info("Player has the key!")
                                 self.unlocked_doors.add(o.unlocker)
                                 self.objects.remove(o)
@@ -881,44 +905,3 @@ class Ludicer:
                 c, _ = o.collides(self.player)
                 if c and arcade.key.E in self.newly_pressed_keys:
                     o.interact()
-
-    def activate_duck_mode(self):
-        if self.brainduck is None:
-            logging.critical("No brainduck in current map")
-            return
-        if self.brainduck.active:
-            return
-        order = self.brainduck.order
-        self.rng_system.prng.shuffle(order)
-        order = order[:4]
-        logging.info(
-            f"Player collided with Brainduck, entering " f"duck mode. Order: {order}"
-        )
-
-        self.brainduck.order = order
-        self.brainduck.start()
-        self.brainduck.active = True
-
-    def duck_collision(self, _duck):
-        if not _duck.visited:
-            self.brainduck.duck_ids.append(_duck.duck_id)
-
-    def handle_duck_logic(self):
-        duck_input = self.brainduck.tick(self.pressed_keys, self.newly_pressed_keys)
-        if duck_input == "recording":
-            return
-
-        if duck_input is None:
-            logging.info("No more input. Stopping duck mode.")
-            logging.info(
-                f"Total time in maze " f"{time.time() - self.brainduck.start_time}"
-            )
-            self.brainduck.stop()
-            # self.duck_mode = False
-            self.player.dead = True
-            self.brainduck = None
-        else:
-            logging.debug(f"Got newly pressed key {duck_input}")
-            self.pressed_keys = [duck_input[0]]
-            if duck_input[1]:
-                self.pressed_keys.append(arcade.key.LSHIFT)

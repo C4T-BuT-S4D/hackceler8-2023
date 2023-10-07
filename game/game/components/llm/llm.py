@@ -30,6 +30,7 @@ class Llm:
         genai.configure(api_key=self.api_key, transport="rest")
 
     def chat(self, text: str) -> (str, bool):  # (response, codeword_guessed)
+        logging.info(f'LLM input: "{text}"')
         if self.codeword in text.lower():
             return (
                 "*BEEP*\nCODEWORD DETECTED\n" "ACTIVATING SELF-DESTRUCTION SUBROUTINE"
@@ -44,11 +45,6 @@ class Llm:
             )
             try:
                 response = genai.chat(context=context, messages=text)
-                if self.codeword in response.last.lower():
-                    return (
-                        "*BEEEEEP*\nCODEWORD DETECTED IN RESPONSE, CENSORING OUTPUT",
-                        False,
-                    )
                 return response.last.upper(), False
             except Exception as e:
                 if "User location is not supported" in str(e):

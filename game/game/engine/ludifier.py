@@ -13,8 +13,6 @@
 # limitations under the License.
 import logging
 
-from components.wall import Wall
-
 
 class FakeSize:
     def __init__(self, width, height):
@@ -37,21 +35,9 @@ class Ludifier:
         self.max_y = map.size[1]
 
         self.counter = 0
-        # Ticks between new walls, lower is faster
-        self.advancement_speed = 30
+        # How many tiles per second are being nuked
+        self.advancement_speed = 60
         self.wall_width = self.map.tile_size[0]
 
     def tick(self):
-        self.counter += 1
-        if not self.counter % self.advancement_speed:
-            logging.debug(
-                f"Adding a new wall at {self.counter // self.advancement_speed * self.wall_width}"
-            )
-            w = Wall(
-                FakeCoord(
-                    self.counter // self.advancement_speed * self.wall_width, 10000
-                ),
-                FakeSize(self.wall_width, 10000),
-                "killawall",
-            )
-            return w
+        return

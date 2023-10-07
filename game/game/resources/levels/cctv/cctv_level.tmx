@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="300" height="400" tilewidth="16" tileheight="16" infinite="0" nextlayerid="14" nextobjectid="25">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="300" height="400" tilewidth="16" tileheight="16" infinite="0" nextlayerid="14" nextobjectid="24">
  <tileset firstgid="1" source="cctv_tileset.tsx"/>
  <tileset firstgid="1201" source="../../maps/hackceler_test.tsx"/>
  <tileset firstgid="1321" source="../../objects/placeholder_item.tsx"/>
@@ -2034,14 +2034,14 @@
    <point/>
   </object>
   <object id="4" name="exit_area" x="1057" y="2146" width="30.5" height="31"/>
-  <object id="5" name="Weapon" x="719.417" y="3910">
+  <object id="7" name="Weapon" x="679.42" y="3910">
    <properties>
     <property name="collectable" type="bool" value="true"/>
     <property name="type" value="gun"/>
    </properties>
    <point/>
   </object>
-  <object id="8" name="Weapon" x="1256.17" y="3902.08">
+  <object id="8" name="Weapon" x="1466.17" y="3906.08">
    <properties>
     <property name="collectable" type="bool" value="false"/>
     <property name="flipped" type="bool" value="true"/>
@@ -2100,12 +2100,6 @@
    </properties>
    <point/>
   </object>
-  <object id="24" name="key_violet" x="1198.09" y="2158.29">
-   <properties>
-    <property name="color" value="violet"/>
-    <property name="display_name" value="Violet key"/>
-   </properties>
-   <point/>
-  </object>
+  <object id="23" name="raccoon_music_npc" x="1200" y="2144"/>
  </objectgroup>
 </map>
