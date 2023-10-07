@@ -644,9 +644,13 @@ class Hackceler8(arcade.Window):
 
         saved_map = self.game.current_map
         self.tick_game_with_movement_and_shooting()
-        if self.recording_enabled and self.game.current_map != saved_map:
-            self.save_recording(current_map=saved_map)
-            self.stop_recording()
+        if self.recording_enabled:
+            if self.game.current_map != saved_map:
+                self.save_recording(current_map=saved_map)
+                self.stop_recording()
+            elif self.player and self.player.dead:
+                self.save_recording()
+                self.stop_recording()
 
         self.center_camera_to_player()
 
