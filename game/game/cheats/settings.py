@@ -62,6 +62,12 @@ class RenderingAndExtraSettings(Form):
         description="Random seed for the game",
     )
 
+    auto_recording_interval = IntegerField(
+        default=5,
+        label="Auto recording interval",
+        description="Interval between auto recordings in seconds",
+    )
+
 
 class PathfindingSettings(Form):
     title = "Pathfinding"

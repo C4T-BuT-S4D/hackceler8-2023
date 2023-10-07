@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import ast
+import datetime
+import json
 import logging
 import os
 import shutil
@@ -30,6 +33,7 @@ from pyglet.image import load as pyglet_load
 import cheats.lib.geom as cheats_geom
 import constants
 import ludicer
+from cheats.lib.tick_data import TickData
 from cheats.maps import render_finish
 from cheats.maps import render_requested
 from cheats.settings import get_settings
@@ -57,15 +61,13 @@ class Hackceler8(arcade.Window):
         self.v_box = None
 
         self.net = net
-        self.game = None
+        self.game: ludicer.Ludicer | None = None
 
         # GUI management
         self.main_menu_manager = gui.UIManager()
         self.main_menu_manager.enable()
 
-        self.force_movement_keys = []
-
-        self.add_movement_keys = []
+        self.ticks_to_apply: list[TickData] = []
 
         self.num_weapon_shifts = -1
         self.auto_weapon_shooting = False
@@ -86,6 +88,11 @@ class Hackceler8(arcade.Window):
         self.show_menu()
 
         self.slow_ticks_mode = False
+        logging.info("Using audio driver {}".format(pyglet.media.get_audio_driver()))
+
+        self.last_save = 0
+        self.recording_enabled = False
+
         logging.info("Using audio driver {}".format(pyglet.media.get_audio_driver()))
 
     def show_menu(self):
@@ -552,14 +559,16 @@ class Hackceler8(arcade.Window):
 
     def tick_game_with_movement_and_shooting(self):
         keys_to_restore = None
-        if self.force_movement_keys:
+        if self.ticks_to_apply:
+            tick_to_apply = self.ticks_to_apply.pop(0)
             keys_to_restore = self.game.raw_pressed_keys.copy()
-            self.game.raw_pressed_keys = set(self.force_movement_keys[0])
-            self.force_movement_keys = self.force_movement_keys[1:]
-        elif self.add_movement_keys:
-            keys_to_restore = self.game.raw_pressed_keys.copy()
-            self.game.raw_pressed_keys |= set(self.add_movement_keys[0])
-            self.add_movement_keys = self.add_movement_keys[1:]
+
+            self.game.random_seed = tick_to_apply.random_seed
+
+            if tick_to_apply.force_keys:
+                self.game.raw_pressed_keys = set(tick_to_apply.keys)
+            else:
+                self.game.raw_pressed_keys |= set(tick_to_apply.keys)
 
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
@@ -622,6 +631,13 @@ class Hackceler8(arcade.Window):
         if render_requested():
             self.render_map()
             render_finish()
+
+        if (
+            self.recording_enabled
+            and time.time() - self.last_save > get_settings()["auto_recording_interval"]
+            and self.game.current_recording
+        ):
+            self.save_recording()
 
         if self.slow_ticks_mode:
             return
@@ -691,20 +707,75 @@ class Hackceler8(arcade.Window):
         if self.game is None:
             return
 
-        if symbol == arcade.key.EQUAL:
+        if symbol in {
+            arcade.key.LCTRL,
+            arcade.key.LALT,
+            arcade.key.LOPTION,
+            arcade.key.LCOMMAND,
+            arcade.key.TAB,
+        }:
+            return
+
+        if symbol == arcade.key.R and modifiers & arcade.key.MOD_CTRL:
+            if self.recording_enabled:
+                self.recording_enabled = False
+                self.reset_recording()
+                return
+
+            self.recording_enabled = True
+            self.last_save = time.time()
+            self.game.current_recording = []
+            self.ticks_to_apply = [
+                TickData(
+                    keys=[arcade.key.R],
+                    random_seed=self.game.rand_seed,
+                    force_keys=True,
+                )
+            ]
+            return
+
+        if symbol == arcade.key.S and modifiers & arcade.key.MOD_CTRL:
+            self.save_recording()
+            return
+
+        if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
+            self.load_recording()
+            return
+
+        if symbol in {arcade.key.EQUAL, arcade.key.PLUS}:
             self.slow_ticks_mode = not self.slow_ticks_mode
             logging.info("Slow ticks mode: %s", self.slow_ticks_mode)
             return
 
-        if symbol == arcade.key.V:
+        if (
+            (modifiers & arcade.key.MOD_ALT) != 0
+            or (modifiers & arcade.key.MOD_OPTION) != 0
+        ) and (
+            symbol
+            in {
+                arcade.key.KEY_1,
+                arcade.key.KEY_2,
+                arcade.key.KEY_3,
+                arcade.key.KEY_4,
+                arcade.key.KEY_5,
+                arcade.key.KEY_6,
+                arcade.key.KEY_7,
+                arcade.key.KEY_8,
+                arcade.key.KEY_9,
+            }
+        ):
             settings = get_settings()
-            keys_to_press = settings["keys_to_press"]
-            if not keys_to_press:
+            macros = settings["macros"]
+            if not macros:
                 return
 
-            keys_to_press = ast.literal_eval(keys_to_press)
             try:
-                self.add_movement_keys = []
+                macros = ast.literal_eval(macros)
+                assert isinstance(macros, (list, tuple))
+
+                keys_to_press = macros[symbol - arcade.key.KEY_1]
+
+                self.ticks_to_apply = []
                 for keys in keys_to_press:
                     # keys: str (single symbol)
                     # keys: list[str] (multiple symbols)
@@ -719,9 +790,15 @@ class Hackceler8(arcade.Window):
                         if isinstance(key, str):
                             key = getattr(arcade.key, key)
                         cur_keys.add(key)
-                    self.add_movement_keys.append(cur_keys)
+                    self.ticks_to_apply.append(
+                        TickData(
+                            keys=list(cur_keys),
+                            random_seed=settings["random_seed"],
+                            force_keys=False,
+                        )
+                    )
             except Exception as e:
-                print(f"bad keys: {keys_to_press}: {e}\n{traceback.format_exc()}")
+                print(f"bad macros: {macros}: {e}\n{traceback.format_exc()}")
             finally:
                 return
 
@@ -806,14 +883,12 @@ class Hackceler8(arcade.Window):
 
             self.game.raw_pressed_keys = original_pressed_keys
 
+        if get_settings()["cancel_macro_on_key_press"] and self.ticks_to_apply:
+            self.ticks_to_apply = []
+            print("canceled macro on key press", symbol)
+
         if symbol == arcade.key.M:
             return
-
-        if self.force_movement_keys:
-            self.force_movement_keys = []
-
-        if self.add_movement_keys and get_settings()["cancel_macro_on_key_press"]:
-            self.add_movement_keys = []
 
         self.game.raw_pressed_keys.add(symbol)
 
@@ -991,7 +1066,7 @@ class Hackceler8(arcade.Window):
             if not path:
                 print("Path not found")
             else:
-                self.force_movement_keys = []
+                self.ticks_to_apply = []
                 for move, shift, state in path:
                     match move:
                         case cheats_rust.Move.W:
@@ -1019,6 +1094,39 @@ class Hackceler8(arcade.Window):
                     if shift:
                         moves.add(arcade.key.LSHIFT)
 
-                    self.force_movement_keys.append(moves)
+                    self.ticks_to_apply.append(
+                        TickData(
+                            force_keys=True,
+                            keys=list(moves),
+                            random_seed=get_settings()["random_seed"],
+                        )
+                    )
 
                 print("path found", [x[:2] for x in path])
+
+    def save_recording(self):
+        filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
+        path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
+        with open(path, "w") as f:
+            json.dump(self.game.current_recording, f, indent=2)
+
+        self.last_save = time.time()
+
+    def load_recording(self):
+        # filename = f"{self.game.current_map}-{datetime.datetime.now().isoformat()}-{self.game.tics:05}.json"
+        filename = "base-2023-10-07T18:29:49.295629-00964.json"
+        path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
+        with open(path, "r") as f:
+            data = json.load(f)
+
+        self.ticks_to_apply = [
+            TickData(
+                keys=tick.get("raw_keys", []),
+                random_seed=tick.get("seed", 0),
+                force_keys=True,
+            )
+            for tick in data
+        ]
+
+    def reset_recording(self):
+        self.game.current_recording = []

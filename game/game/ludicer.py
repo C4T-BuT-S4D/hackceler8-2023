@@ -219,6 +219,9 @@ class Ludicer:
 
         self.setup()
 
+        # cheat sh[ee]it.
+        self.current_recording = []
+
     @property
     def won(self):
         # Game is won if the time is neither None nor 0
@@ -551,6 +554,15 @@ class Ludicer:
         )
 
     def send_game_info(self):
+        if not self.is_server:
+            save = {
+                "raw_keys": list(self.raw_pressed_keys),
+                "text_input": self.get_text_input(),
+            }
+            if self.rand_seed != 0:
+                save["seed"] = self.rand_seed
+            self.current_recording.append(save)
+
         if self.is_server or self.net is None:
             return
         with self.mutex:
