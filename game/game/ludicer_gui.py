@@ -750,9 +750,7 @@ class Hackceler8(arcade.Window):
                 self.stop_recording()
                 return
 
-            self.recording_enabled = True
-            self.last_save = time.time()
-            self.reset_recording()
+            self.start_recording()
             self.ticks_to_apply = [
                 TickData(
                     keys=[arcade.key.R],
@@ -767,6 +765,10 @@ class Hackceler8(arcade.Window):
             return
 
         if symbol == arcade.key.L and modifiers & arcade.key.MOD_CTRL:
+            if modifiers & arcade.key.MOD_OPTION or modifiers & arcade.key.MOD_ALT:
+                self.stop_recording()
+                self.start_recording()
+
             self.load_recording()
             return
 
@@ -1207,4 +1209,9 @@ class Hackceler8(arcade.Window):
 
     def stop_recording(self):
         self.recording_enabled = False
+        self.reset_recording()
+
+    def start_recording(self):
+        self.recording_enabled = True
+        self.last_save = time.time()
         self.reset_recording()
