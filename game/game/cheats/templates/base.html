@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>CBS.Cheat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+</head>
+
+<body>
+  <div class="layout">
+    <header>
+      <nav class="navbar">
+        <div class="is-flex">
+          <a class="navbar-item is-size-5" href="{{ url_for('index') }}">Settings</a>
+          <a class="navbar-item is-size-5" href="{{ url_for('map') }}">Map</a>
+          <a class="navbar-item is-size-5" href="{{ url_for('autoindex') }}">Static</a>
+        </div>
+      </nav>
+    </header>
+    <main class="px-1">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+
+</html>

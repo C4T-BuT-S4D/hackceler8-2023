@@ -5,7 +5,6 @@ dill == 0.3.7
 google-generativeai == 0.1.0
 maturin
 flask
-flask-bootstrap
-flask-wtf
+WTForms
 Flask-AutoIndex
 js2py >= 0.74
