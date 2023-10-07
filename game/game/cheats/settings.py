@@ -89,10 +89,10 @@ class Settings(FlaskForm):
         description="Number of ticks to emulate in slow_ticks_mode",
     )
 
-    keys_to_press = TextAreaField(
+    macros = TextAreaField(
         default="",
-        label="Keys to press",
-        description="Keys to press in JSON format",
+        label="Macros",
+        description="Macros in Python format",
     )
 
     cancel_macro_on_key_press = BooleanField(
