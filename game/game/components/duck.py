@@ -30,7 +30,7 @@ class Duck(generics.GenericObject):
 
         self.visited = False
         self.blocking = False
-        self.duck_id = int(duck_id.split("_")[1])
+        self.duck_id = duck_id
 
         self.item_yielded = False
 

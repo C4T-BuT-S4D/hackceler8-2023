@@ -153,7 +153,7 @@ class Interpreter:
                     self.pc = (
                         self.jmps[self.pc] if self.data[self.dp] != 0 else self.pc + 1
                     )
-                    return
+                return
             case other:
                 logging.critical(f"Unknown op: {other}")
 
@@ -162,3 +162,24 @@ class Interpreter:
             logging.info("No more")
             self.stopped = True
         return retval
+
+
+if __name__ == "__main__":
+    bd = Interpreter(
+        b"++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+    )
+    bd = Interpreter(b"++++>++++>++[<[.-].].")
+    bd = Interpreter(b"+>------[<.>-]")
+    print(bd.order)
+    bd = Interpreter(b",.,.")
+    # bd = Interpreter(b'+[--->++<]>+.................')
+    bd.start()
+    aa = bd.execute_until_end()
+    print(len(aa))
+    print(aa[0])
+    print(aa)
+    # print(bd.execute_until_return())
+    # print(bd.execute_until_return())
+    # print(bd.execute_until_return())
+    # print(bd.execute_until_return())
+    # print(bd.execute_until_return())

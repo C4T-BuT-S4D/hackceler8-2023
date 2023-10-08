@@ -122,7 +122,7 @@ class BasicTileMap:
             logging.debug(f"Inserting object {o.bounds.dump()} into tree")
             t = self.qt.insert(o.bounds)
             if not t:
-                logging.error("Failed to insert object")
+                logging.debug("Failed to insert object")
             self.obj_map[o.unique_id] = o
 
         logging.debug(self.map_size_pixels)
@@ -385,7 +385,10 @@ class BasicTileMap:
                     coords, o.name, props.get("display_name"), props.get("color")
                 )
             )
-
+        elif o.name.startswith("ext"):
+            logging.debug(o)
+            logging.debug("parsing new exit area (small)")
+            self.objs.append(magic_items.Item(coords))
         elif o.name.startswith("item_"):
             o.name = o.name[len("item_") :]
             logging.debug(o)
