@@ -15,6 +15,7 @@
 import arcade.key
 
 import engine.generics as generics
+import engine.hitbox as hitbox
 
 
 class Weapon(generics.GenericObject):

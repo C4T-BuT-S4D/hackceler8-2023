@@ -14,6 +14,7 @@
 
 import logging
 
+import constants
 from engine import generics
 from engine import hitbox
 from engine.walk_data import WalkData
