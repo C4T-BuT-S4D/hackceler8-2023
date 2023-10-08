@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import math
-from collections import deque
 
 import arcade
 
@@ -27,7 +25,7 @@ from engine.walk_data import WalkData
 
 
 class Enemy(generics.GenericObject):
-    respawn_list = deque(maxlen=8)
+    respawn_list = []
     reverse_symbol = arcade.load_texture("resources/enemies/reverse.png")
 
     def __init__(
@@ -342,28 +340,3 @@ class Martian(Enemy):
         super().tick()
         if self.shooting:
             self.set_animation("shoot")
-
-
-class RegenJellyfishEnemy(StaticJellyfish):
-    REGEN_RATE = 10
-
-    def __init__(
-        self, coords, name, damage, respawn, respawn_ticks, walk_data, control_inverter
-    ):
-        super().__init__(
-            coords,
-            name=name,
-            damage=damage,
-            respawn=respawn,
-            respawn_ticks=respawn_ticks,
-            walk_data=walk_data,
-            control_inverter=control_inverter,
-        )
-        self.max_health = 50
-        self._init_health()
-
-    def tick(self):
-        super().tick()
-        if self.health < self.max_health and self.game.tics % 3 == 0:
-            self.set_health(min(self.max_health, self.health + self.REGEN_RATE))
-            logging.info(f"health = {self.health} tics = {self.game.tics}")

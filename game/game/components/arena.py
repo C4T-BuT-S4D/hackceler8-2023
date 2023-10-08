@@ -17,7 +17,7 @@ from engine import hitbox
 
 
 class Arena(generics.GenericObject):
-    def __init__(self, coords, size, name):
+    def __init__(self, coords, size, name, stitching, dir):
         self.perimeter = [
             hitbox.Point(coords.x, coords.y),
             hitbox.Point(coords.x + size.width, coords.y),
@@ -29,3 +29,5 @@ class Arena(generics.GenericObject):
         )
         self.blocking = True
         self.name = name
+        self.stitching = stitching
+        self.dir = dir

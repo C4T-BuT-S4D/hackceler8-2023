@@ -16,6 +16,7 @@ import argparse
 import json
 import logging
 import multiprocessing
+import os
 import time
 
 import log
@@ -145,6 +146,13 @@ def main():
     log.setup_logging(args, file_prefix="server")
     logging.getLogger("arcade").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)
+
+    # Create a save state if there is none yet
+    if not os.path.exists("save_state"):
+        logging.info("Save file does not exist yet, creating a new one")
+        l = ludicer.Ludicer(None, True)
+        l._save()
+        del l
 
     net = network.NetworkConnection.create_server(
         args.hostname,

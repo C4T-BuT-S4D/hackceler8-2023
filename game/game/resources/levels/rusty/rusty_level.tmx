@@ -820,7 +820,7 @@
 </data>
  </layer>
  <objectgroup id="4" name="Player">
-  <object id="1" name="Player" x="160" y="1728">
+  <object id="1" name="Player" x="80" y="1722">
    <properties>
     <property name="hitbox_height" type="int" value="32"/>
     <property name="hitbox_width" type="int" value="32"/>
@@ -924,10 +924,8 @@
     <property name="y_speed" type="int" value="300"/>
    </properties>
   </object>
-  <object id="38" name="password_npc_green" x="4030.5" y="787">
-   <properties>
-    <property name="walk_data" value="2000,E270,W270"/>
-   </properties>
+  <object id="38" name="python_npc" x="4054" y="788">
+   <point/>
   </object>
  </objectgroup>
 </map>

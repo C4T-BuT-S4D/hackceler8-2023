@@ -4,11 +4,10 @@
   name = "gctf-2023-devenv";
   targetPkgs = pkgs: with pkgs; [
     ffmpeg-full
-    fontconfig
     freetype
+    fontconfig
     libGL
     libGLU
-    openal
     python3
     python3Packages.virtualenv
     tiled
