@@ -305,11 +305,6 @@ class Hackceler8(arcade.Window):
 
         if self.game.textbox is not None:
             self.game.textbox.draw()
-        if self.game.jam_session is not None:
-            self.game.jam_session.draw()
-            self.camera.use()
-            self.game.jam_session.draw_notes()
-            self.gui_camera.use()
         if self.game.map_switch is not None:
             self.game.map_switch.draw()
 

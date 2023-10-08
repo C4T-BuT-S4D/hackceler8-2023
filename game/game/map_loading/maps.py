@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import glob
 from enum import Enum
+from pathlib import Path
 from typing import NamedTuple
 from typing import Optional
 
@@ -35,7 +37,11 @@ class MapAttrs(NamedTuple):
 def load() -> dict:
     base_tilemap = tilemap.BasicTileMap("resources/maps/hackceler_map.tmx")
 
-    spike_tilemap = tilemap.BasicTileMap("resources/maps/spike_map.tmx")
+    spike_tilemap = tilemap.BasicTileMap.from_mgz("resources/maps/spike_map.mgz")
+
+    logic_tilemap = tilemap.BasicTileMap("resources/maps/logic_map.tmx")
+
+    boss_tilemap = tilemap.BasicTileMap("resources/maps/boss_map.tmx")
 
     cctv_tilemap = tilemap.BasicTileMap("resources/levels/cctv/cctv_level.tmx")
     cctv_prerender = arcade.load_texture("resources/levels/cctv/cctv_level.png")
@@ -49,16 +55,20 @@ def load() -> dict:
     water_tilemap = tilemap.BasicTileMap("resources/levels/water/water_level.tmx")
     water_prerender = arcade.load_texture("resources/levels/water/water_level.png")
 
-    danmaku_tilemap = tilemap.BasicTileMap("resources/maps/danmaku_map.tmx")
-
     maps_dict = {
         "base": MapAttrs(base_tilemap, None, GameMode.MODE_SCROLLER),
         "spike": MapAttrs(spike_tilemap, None, GameMode.MODE_SCROLLER),
-        "danmaku": MapAttrs(danmaku_tilemap, None, GameMode.MODE_SCROLLER),
+        "logic": MapAttrs(logic_tilemap, None, GameMode.MODE_SCROLLER),
+        "boss": MapAttrs(boss_tilemap, None, GameMode.MODE_SCROLLER),
         "cctv": MapAttrs(cctv_tilemap, cctv_prerender, GameMode.MODE_PLATFORMER),
         "rusty": MapAttrs(rusty_tilemap, rusty_prerender, GameMode.MODE_PLATFORMER),
         "space": MapAttrs(space_tilemap, space_prerender, GameMode.MODE_PLATFORMER),
         "water": MapAttrs(water_tilemap, water_prerender, GameMode.MODE_PLATFORMER),
     }
+
+    # Load maze tilemap.
+    for fn in glob.glob("resources/maps/maze_*_map.mgz"):
+        maze_tilemap = tilemap.BasicTileMap.from_mgz(fn)
+        maps_dict[Path(fn).stem] = MapAttrs(maze_tilemap, None, GameMode.MODE_SCROLLER)
 
     return maps_dict
