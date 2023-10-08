@@ -617,8 +617,9 @@ class Hackceler8(arcade.Window):
                 self.game.raw_pressed_keys = keys_to_restore
                 self.game.force_random_seed = None
             return
-
-        if get_settings()["validate_transitions"]:
+        do_validate = get_settings()["validate_transitions"]
+        if do_validate:
+            print('validating transition')
             expected = cheats_rust.get_transition(
                 settings, static_state, state, move, shift
             )
@@ -629,7 +630,7 @@ class Hackceler8(arcade.Window):
             self.game.raw_pressed_keys = keys_to_restore
             self.game.force_random_seed = None
 
-        if get_settings()["validate_transitions"]:
+        if do_validate:
             attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]
             vals = [
                 (getattr(self.game.player, k1), getattr(expected, k2))
