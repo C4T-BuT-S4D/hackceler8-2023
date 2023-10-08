@@ -8,3 +8,4 @@ env-server/
 !/game/game/cheats/static/.keep
 /game/game/cheats/recordings/*
 !/game/game/cheats/recordings/.keep
+/game/game/cheats/macros.json
