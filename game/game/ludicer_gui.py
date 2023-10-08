@@ -819,6 +819,8 @@ class Hackceler8(arcade.Window):
 
                     cur_keys = set()
                     for key in keys:
+                        if key == '':
+                            continue
                         if isinstance(key, str):
                             key = getattr(arcade.key, key)
                         cur_keys.add(key)
