@@ -591,11 +591,11 @@ class Ludicer:
         return self.textbox.text_input.text
 
     def set_text_input(self, text):
-        if not self.is_server:
-            logging.error(
-                "Called set_text_input on client, should only be used on server"
-            )
-            return
+        # if not self.is_server:
+        #     logging.error(
+        #         "Called set_text_input on client, should only be used on server"
+        #     )
+        #     return
         if self.textbox is None or not self.textbox.text_input_appeared:
             return
         self.textbox.text_input.text = text

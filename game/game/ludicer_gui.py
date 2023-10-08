@@ -38,7 +38,6 @@ from cheats.lib.tick_data import TickData
 from cheats.maps import render_finish
 from cheats.maps import render_requested
 from cheats.settings import get_settings
-from cheats.settings import update_settings
 from map_loading.maps import GameMode
 
 SCREEN_TITLE = "Hackceler8-23"
@@ -585,6 +584,9 @@ class Hackceler8(arcade.Window):
             else:
                 self.game.raw_pressed_keys |= set(tick_to_apply.keys)
 
+            if tick_to_apply.text_input is not None:
+                self.game.set_text_input(tick_to_apply.text_input)
+
         settings, state, static_state = self.to_rust_state()
         keys = set(self.game.raw_pressed_keys)  # copy
         if arcade.key.LSHIFT in keys:
@@ -619,7 +621,7 @@ class Hackceler8(arcade.Window):
             return
         do_validate = get_settings()["validate_transitions"]
         if do_validate:
-            print('validating transition')
+            print("validating transition")
             expected = cheats_rust.get_transition(
                 settings, static_state, state, move, shift
             )
@@ -1199,6 +1201,7 @@ class Hackceler8(arcade.Window):
             TickData(
                 keys=tick.get("raw_keys", []),
                 random_seed=tick.get("seed", 0),
+                text_input=tick.get("text_input", None),
                 force_keys=True,
             )
             for tick in data
