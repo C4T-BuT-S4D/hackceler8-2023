@@ -19,10 +19,8 @@ from copy import copy
 from enum import Enum
 from threading import Lock
 from threading import Thread
-import os
 
 import arcade
-import dill
 import numpy as np
 import xxhash
 
@@ -586,8 +584,7 @@ class Ludicer:
             "text_input": self.get_text_input(),
             "llm_ack": llm_ack,
         }
-        if self.tics <= 1:
-            msg["seed"] = self.rand_seed
+        msg["seed"] = self.rand_seed
         msg = json.dumps(msg).encode()
         self.net.send_one(msg)
 
