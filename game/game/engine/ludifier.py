@@ -38,7 +38,7 @@ class Ludifier:
 
         self.counter = 0
         # How many tiles per second are being nuked
-        self.advancement_speed = 5
+        self.advancement_speed = 15
         self.wall_width = self.map.tile_size[0]
         self.wall_height = self.map.tile_size[1]
         self.stopped = False
@@ -66,4 +66,4 @@ class Ludifier:
                 FakeSize(10000, self.wall_height),
                 "killawall",
             )
-            return [w_v]
+            return [w]

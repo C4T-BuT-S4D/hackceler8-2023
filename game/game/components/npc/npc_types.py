@@ -15,12 +15,12 @@
 from .banker_npc import BankerNPC
 from .npc import BarkNpc
 from .npc import Npc
-from .password_npc import PythonNPC
 from .password_npc import SnakeNpc
+from .password_npc_blue import PasswordNpcBlue
 
 NPC_TYPES = {
     "bark_npc": BarkNpc,
     "snake_npc": SnakeNpc,
     "banker_npc": BankerNPC,
-    "python_npc": PythonNPC,
+    "password_npc_blue": PasswordNpcBlue,
 }

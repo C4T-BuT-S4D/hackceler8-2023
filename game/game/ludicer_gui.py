@@ -245,17 +245,26 @@ class Hackceler8(arcade.Window):
         if len(self.draws) > 1:
             arcade.draw_text(
                 "FPS: %.02f" % (len(self.draws) / (self.draws[-1] - self.draws[0])),
-                300,
+                250,
                 10,
                 arcade.csscolor.WHITE,
                 18,
                 font_name=constants.FONT_NAME,
             )
 
+        arcade.draw_text(
+            f"TICKS: {self.game.tics}",
+            450,
+            10,
+            arcade.csscolor.ORANGE,
+            18,
+            font_name=constants.FONT_NAME,
+        )
+
         if self.game.danmaku_system and self.game.danmaku_system.boss_health:
             arcade.draw_text(
                 "BOSS HEALTH: %.02f" % self.game.danmaku_system.boss_health,
-                500,
+                750,
                 10,
                 arcade.csscolor.BLUE,
                 18,
