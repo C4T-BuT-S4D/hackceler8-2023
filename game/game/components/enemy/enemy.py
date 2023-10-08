@@ -15,6 +15,7 @@
 import math
 
 import arcade
+import pytiled_parser
 
 import constants
 from components.projectile import Projectile

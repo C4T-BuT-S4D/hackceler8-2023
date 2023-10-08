@@ -22,6 +22,7 @@ from threading import Thread
 import os
 
 import arcade
+import dill
 import numpy as np
 import xxhash
 

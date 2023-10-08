@@ -16,6 +16,9 @@ import logging
 from copy import deepcopy
 
 import arcade
+import pytiled_parser
+
+from components.weapon import weapon_types
 
 
 class CombatSystem:

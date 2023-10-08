@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import base64
+import logging
 import zlib
+
+import js2py
 
 # Format is always the same: offset, length, kwargs (as eval), and vars to put in
 checks = [

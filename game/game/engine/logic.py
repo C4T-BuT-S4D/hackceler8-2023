@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 
 import arcade
 
 from components.logic import PassiveLogicComponent
+from components.player import Player
+from engine import generics
+from engine import quadtree
 
 LOGIC_INTERVAL = 5
 

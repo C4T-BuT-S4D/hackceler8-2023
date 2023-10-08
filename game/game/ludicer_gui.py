@@ -541,6 +541,10 @@ class Hackceler8(arcade.Window):
 
         if self.auto_danmaku_shooting:
             added_keys.add(arcade.key.SPACE)
+        if self.game.textbox is not None:
+            self.game.textbox.draw()
+        if self.game.map_switch is not None:
+            self.game.map_switch.draw()
 
         # add temporary pressed keys for this single tick
         for key in added_keys:

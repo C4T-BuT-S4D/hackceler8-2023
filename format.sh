@@ -5,7 +5,7 @@ curdir=$(pwd)
 
 cd game/game
 
-autoflake --recursive --in-place --remove-all-unused-imports .
+# autoflake --recursive --in-place --remove-all-unused-imports .
 isort --force-single-line-imports .
 black .
 

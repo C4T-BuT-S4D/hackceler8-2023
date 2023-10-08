@@ -14,6 +14,7 @@
 
 from .banker_npc import BankerNPC
 from .npc import BarkNpc
+from .npc import Npc
 from .password_npc import PythonNPC
 from .password_npc import SnakeNpc
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import math
+from collections import deque
 
 import arcade
 

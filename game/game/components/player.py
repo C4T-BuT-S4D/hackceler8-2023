@@ -16,7 +16,9 @@ import logging
 
 import arcade
 
+import constants
 from engine import generics
+from engine import hitbox
 
 
 class Player(generics.GenericObject):

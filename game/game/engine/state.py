@@ -16,6 +16,8 @@ import logging
 import os
 import time
 
+import dill
+
 from components.magic_items import Item
 from components.magic_items import load_item_from_save
 
