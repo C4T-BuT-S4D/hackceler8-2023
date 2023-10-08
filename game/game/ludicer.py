@@ -61,7 +61,7 @@ COLOR_LIST = [
 
 
 class Ludicer:
-    def __init__(self, net, is_server, debug=True, eager_level_load=True):
+    def __init__(self, net, is_server, debug=False, eager_level_load=True):
         self.mutex = Lock()
         self.net = net
 
@@ -89,15 +89,21 @@ class Ludicer:
                 except Exception as e:
                     logging.critical(f"Unable to read file {self.load_file}: {e}")
 
-        self.maps_dict = maps.load()
+        if debug:
+            self.maps_dict = maps.load_debug()
+        else:
+            self.maps_dict = maps.load()
 
         # We keep a pristine copy to allow for resets
         self.original_maps_dict = copy(self.maps_dict)
 
         self.arena_mapping = {
             "spike_arena": "spike",
+            "maze_arena": "maze",
+            "speed_arena": "speed",
             "logic_arena": "logic",
             "boss_arena": "boss",
+            "danmaku_arena": "danmaku",
             "purple_arena": "cctv",
             "red_arena": "rusty",
             "violet_arena": "space",
@@ -157,7 +163,11 @@ class Ludicer:
         self.grenade_system = None
         self.brainduck = None
 
-        self.boss = None
+        self.level_start_time = None
+
+        self.boss_llm = None
+        self.boss_danmaku = None
+
         self.unlocked_doors = set()
 
         self.boss_llm_exists = False
@@ -215,7 +225,7 @@ class Ludicer:
         self.win_timestamp = time.time()
 
     def dump_state(self):
-        h = self.tiled_map.hck_hash()
+        h = ""
         for i in (
             self.objects
             + self.static_objs
@@ -261,8 +271,12 @@ class Ludicer:
                 color="blue",
                 wearable=False,
             ),
-            Item(None, name="magnet", display_name="Magnet", wearable=True),
             Item(None, name="boots", display_name="Boots", wearable=True),
+            Item(None, name="noogler", display_name="NooglerHat", wearable=True),
+            Item(None, name="magnet", display_name="Magnet", wearable=True),
+            Item(
+                None, name="flag_danmaku", display_name="Danmaku flag", wearable=False
+            ),
             Item(None, name="flag_llm", display_name="LLM flag", wearable=False),
         ]
 
@@ -350,6 +364,7 @@ class Ludicer:
         self.logic_engine = None
         self.level_modifier = None
         self.brainduck = None
+        self.level_start_time = None
         self.current_mode = self.maps_dict[self.current_map].game_mode
 
         match self.current_mode:
@@ -420,6 +435,13 @@ class Ludicer:
             else:
                 self.objects.append(o)
                 if o.nametype == "Boss":
+                    match o.version:
+                        case "alpha":
+                            logging.info("Have LLM boss")
+                            self.boss_llm = o
+                        case "lambda":
+                            self.boss_danmaku = o
+                            logging.info("Have Danmaku boss")
                     self.boss = o
                     if self.won:
                         o.destructing = True
@@ -432,9 +454,12 @@ class Ludicer:
             self.grenade_system = GrenadeSystem(self, targets=targets)
 
         if self.current_map == "danmaku":
-            self.danmaku_system = DanmakuSystem(
-                self.player, self.boss, is_server=self.is_server
-            )
+            if self.boss_danmaku is None:
+                logging.critical("No Danmaku boss loaded")
+            else:
+                self.danmaku_system = DanmakuSystem(
+                    self.player, self.boss_danmaku, is_server=self.is_server
+                )
 
         self.static_objs = self.tiled_map.static_objs.copy()
         for o in self.static_objs:
@@ -442,7 +467,6 @@ class Ludicer:
             if o.nametype == "Brainduck":
                 logging.info("Have Brainduck")
                 self.brainduck = o
-                self.order_brainduck()
 
         self.physics_engine = physics.PhysicsEngine(
             platformer_rules=(self.current_mode == GameMode.MODE_PLATFORMER),
@@ -458,11 +482,12 @@ class Ludicer:
         self.logic_engine = logic.LogicEngine(self.tiled_map.logic_map)
 
         logging.debug("Scroller setup complete")
+        self.level_start_time = time.time()
 
     def setup_platformer(self):
         self.setup_scroller()
         self.player.base_y_speed = 320
-        if self.current_map == "rusty":
+        if self.current_map == "cctv" or self.current_map == "water":
             self.level_modifier = Ludifier(self.tiled_map)
 
     def switch_maps(self, new_map):
@@ -697,15 +722,15 @@ class Ludicer:
         self.logic_engine.tick()
 
         if self.physics_engine.exit_on_next:
-            if self.brainduck is not None:
-                self.handle_duck_exit()
+            logging.info(f"total time in level: {time.time() - self.level_start_time}")
+            self.handle_duck_exit()
             self.switch_maps("base")
 
         if self.level_modifier is not None:
-            new_object = self.level_modifier.tick()
-            if new_object is not None:
-                for _no in new_object:
-                    self.static_objs.append(_no)
+            _objs = self.level_modifier.tick()
+            if _objs is not None:
+                logging.info(_objs)
+                self.static_objs.extend(_objs)
 
         return self.send_game_info()
 
@@ -715,7 +740,7 @@ class Ludicer:
                 self.rand_seed = int.from_bytes(os.urandom(4), byteorder="big")
                 self.rng_system.seed(self.rand_seed)
         # Sync seed with client on startup.
-        elif self.rand_seed is not None and self.tics == 0:
+        elif self.rand_seed is not None:
             self.rng_system.seed(self.rand_seed)
             self.rand_seed = None
 
@@ -759,7 +784,7 @@ class Ludicer:
                 c, _ = o.collides(self.player)
                 if c:
                     self.player.apply_modifier(o.modifier, 0)
-                    logging.debug(f"apply {o.name} {self.tics}")
+                    logging.info(f"apply {o.name} {self.tics}")
                     continue
                 current_distance = o.proximity(self.player)
                 if current_distance < o.modifier.min_distance:
@@ -784,9 +809,11 @@ class Ludicer:
                         )
 
                     case "ExitArea":
-                        logging.debug(f"Player collided with {o.name}")
-                        self.dump_state()
+                        logging.info(f"Player collided with {o.name}")
+                        logging.info(time.time() - self.level_start_time)
+                        self.handle_duck_exit()
                         self.switch_maps("base")
+                        self.dump_state()
                         return
 
                     case "Portal":
@@ -814,7 +841,7 @@ class Ludicer:
 
                     case "Wall":
                         if o.name == "killawall":
-                            logging.info(":/")
+                            logging.info("ded")
                             self.player.set_health(0)
                             if self.level_modifier is not None:
                                 self.level_modifier.stop()
@@ -825,8 +852,8 @@ class Ludicer:
                     match o.nametype:
                         case "Door":
                             logging.info(f"Collision between player and {o.name}")
-                            arcade.play_sound(self.jump_sound)
                             if o.passthrough(self.items):
+                                arcade.play_sound(self.jump_sound)
                                 logging.info("Player has the key!")
                                 self.unlocked_doors.add(o.unlocker)
                                 self.objects.remove(o)
@@ -877,14 +904,14 @@ class Ludicer:
             return
         if self.brainduck.active:
             return
-
+        self.order_brainduck()
         self.brainduck.start()
         self.brainduck.active = True
 
     def duck_collision(self, _duck):
         if not _duck.visited:
             _duck.visited = True
-            self.brainduck.duck_ids.append(_duck.duck_id)
+            self.brainduck.duck_ids.append(int(_duck.duck_id.split("_")[1]))
 
     def handle_duck_logic(self):
         duck_input = self.brainduck.tick(self.pressed_keys, self.newly_pressed_keys)
@@ -907,6 +934,8 @@ class Ludicer:
                 self.pressed_keys.append(arcade.key.LSHIFT)
 
     def handle_duck_exit(self):
+        if self.brainduck is None:
+            return
         it = self.brainduck.check_order()
         if it is not None:
             self.gather_items([it])

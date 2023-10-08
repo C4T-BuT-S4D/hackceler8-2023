@@ -50,7 +50,13 @@ def _get_tileset(name):
 
 
 class Item(generics.GenericObject):
-    def __init__(self, coords, name, display_name, color=None, wearable=False):
+    def __init__(
+        self, coords=None, name=None, display_name=None, color=None, wearable=False
+    ):
+        if name is None:
+            name = "key_violet"
+            color = "violet"
+            display_name = "Violet key"
         if name not in ITEMS:
             logging.critical(f"Untracked item: {name}")
 
@@ -137,7 +143,7 @@ class ItemCollection:
         for i in self.items:
             if i.name == item:
                 return i
-        logging.critical(f"Untracked item: {item.name}")
+        logging.critical(f"Untracked item: {item}")
 
     def mark_collected(self, item_name):
         self[item_name].collected_time = time.time()

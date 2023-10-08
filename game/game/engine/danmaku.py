@@ -20,13 +20,19 @@ import arcade
 
 import constants
 from components import danmaku
+from engine.coroutines import CoroutineSystem
+from engine.coroutines import sleep_ticks
 
 PLAYER_HITBOX_RADIUS = 5
 MARGIN = 50
 BOSS_FLASH_LEN = 3
 BOSS_FLASH_MAX_COOLDOWN = 6
-INTRO_LEN = 180
-BOSS_TITLE = 'villAIn Mk.I "Example Boss"'
+BOSS_TITLES = """
+rAIbbit Mk.FINAL "???????"
+rAIbbit Mk.FINAL "TH?????"
+rAIbbit Mk.FINAL "THE ???"
+rAIbbit Mk.FINAL "THE END"
+""".strip().splitlines()
 HEALTHBAR_LEN = 1240
 
 
@@ -54,7 +60,8 @@ class DanmakuSystem:
             self.boss.y - 278,
             self.boss.y + 300,
         ]  # lrbt
-        self.boss_max_health = 1000
+        self.boss_max_health = 3500
+        self.boss_phase = 1
         self.boss_health = self.boss_max_health
         self.player = player
         self.ticks = 0
@@ -68,10 +75,12 @@ class DanmakuSystem:
         self.boss_flash_time = 0
         self.boss_flash_cooldown = 0
         self.is_server = is_server
+        self.focusing = False
         if not self.is_server:
             self.gui = {}
+            self.gui["black"] = DrawableRectLRTB(0, 1280, 1280, 0, color=(0, 0, 0, 255))
             self.gui["boss_title_background"] = DrawableRectLRTB(
-                0, 1280, 1280, 1180, color=(0, 0, 0, 0)
+                0, 1280, 1280, 1180 - 60, color=(0, 0, 0, 0)
             )
             self.gui["boss_health"] = DrawableRectLRTB(
                 640 - HEALTHBAR_LEN // 2,
@@ -81,7 +90,7 @@ class DanmakuSystem:
                 color=(255, 0, 0, 0),
             )
             self.gui["boss_title"] = arcade.Text(
-                BOSS_TITLE,
+                BOSS_TITLES[0],
                 640,
                 1240,
                 font_size=36,
@@ -90,11 +99,30 @@ class DanmakuSystem:
                 anchor_x="center",
                 anchor_y="center",
             )
+            self.gui["message1"] = arcade.Text(
+                "Is this it? The end is nigh. Abandon all hope! No lives, no bombs, no continues. Go for a perfect clear! "
+                * 3,
+                640,
+                1180 - 25,
+                color=(255, 255, 255, 0),
+                font_size=36,
+                font_name=constants.FONT_NAME,
+                anchor_x="center",
+                anchor_y="center",
+            )
+            for col in range(7):
+                for row in range(7):
+                    hexagon = arcade.Sprite("resources/villain/error_hexagon.png")
+                    hexagon.set_position(
+                        222 * col - 26, 256 * ((6 - row) + (col % 2) / 2)
+                    )
+                    hexagon.height = 0.1
+                    self.gui[f"hex{col}_{row}"] = hexagon
             self.gui["warning_background"] = DrawableRectLRTB(
                 0, 1280, 640 + 150, 640 - 150, color=(0, 0, 0, 0)
             )
             self.gui["warning1"] = arcade.Text(
-                "WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING",
+                "ERROR " * 10,
                 640,
                 640 + 120,
                 color=(255, 0, 0, 0),
@@ -104,7 +132,7 @@ class DanmakuSystem:
                 anchor_y="center",
             )
             self.gui["warning2"] = arcade.Text(
-                "WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING",
+                "ERROR " * 10,
                 640,
                 640 - 120 - 6,
                 color=(255, 0, 0, 0),
@@ -124,9 +152,46 @@ class DanmakuSystem:
                 anchor_y="center",
             )
 
+            self.gui["phase_marker1"] = DrawableRectLRTB(
+                640 - HEALTHBAR_LEN // 4 - 1,
+                640 - HEALTHBAR_LEN // 4 + 1,
+                1215,
+                1185,
+                color=(255, 255, 255, 0),
+            )
+            self.gui["phase_marker2"] = DrawableRectLRTB(
+                640 - 1, 640 + 1, 1215, 1185, color=(255, 255, 255, 0)
+            )
+            self.gui["phase_marker3"] = DrawableRectLRTB(
+                640 + HEALTHBAR_LEN // 4 - 1,
+                640 + HEALTHBAR_LEN // 4 + 1,
+                1215,
+                1185,
+                color=(255, 255, 255, 0),
+            )
+        self.boss_script = danmaku.BossScript(self, 640, 870)
+        self.anim_coroutines = CoroutineSystem([self.anim_main()])
+        self.game_running = False
+
     def draw(self):
         self.player_bullets.draw()
         self.bullets.draw()
+        if self.focusing:
+            arcade.draw_rectangle_filled(
+                self.player.x,
+                self.player.y,
+                PLAYER_HITBOX_RADIUS * 2,
+                PLAYER_HITBOX_RADIUS * 2,
+                (255, 255, 255),
+            )
+            arcade.draw_rectangle_outline(
+                self.player.x,
+                self.player.y,
+                PLAYER_HITBOX_RADIUS * 2 - 2,
+                PLAYER_HITBOX_RADIUS * 2 - 2,
+                (255, 0, 0),
+                border_width=2,
+            )
 
     def _draw(self):
         arcade.draw_rectangle_filled(
@@ -141,8 +206,8 @@ class DanmakuSystem:
                 arcade.draw_rectangle_outline(
                     bullet.position[0],
                     bullet.position[1],
-                    bullet.hitbox_radius * 2,
-                    bullet.hitbox_radius * 2,
+                    bullet.hitbox_radius_x * 2,
+                    bullet.hitbox_radius_y * 2,
                     (255, 0, 0),
                 )
         arcade.draw_lrtb_rectangle_outline(
@@ -164,51 +229,112 @@ class DanmakuSystem:
         for elem in self.gui:
             self.gui[elem].draw()
 
+    def warning_fadein(self):
+        for i in range(30):
+            progress = i / 29
+            self.gui["warning_background"].color = (0, 0, 0, int(128 * progress))
+            self.gui["warning1"].color = (255, 0, 0, int(255 * progress))
+            self.gui["warning2"].color = (255, 0, 0, int(255 * progress))
+            yield
+
+    def boss_title_type(self):
+        for i in range(90):
+            progress = i / 89
+            type_len = 1 + int(progress * len(BOSS_TITLES[0]))
+            if type_len != len(self.gui["warning_title"].text):
+                self.gui["warning_title"].text = BOSS_TITLES[0][:type_len]
+            yield
+
+    def warning_fadeout(self):
+        for i in range(30):
+            progress = i / 29
+            self.gui["warning_background"].color = (0, 0, 0, int(128 * (1 - progress)))
+            self.gui["warning1"].color = (200, 0, 0, int(255 * (1 - progress)))
+            self.gui["warning2"].color = (255, 0, 0, int(255 * (1 - progress)))
+            self.gui["warning_title"].color = (255, 255, 255, int(255 * (1 - progress)))
+            yield
+
+    def top_ui_fadein(self):
+        for i in range(30):
+            progress = i / 29
+            self.gui["boss_title_background"].color = (0, 0, 0, int(128 * progress))
+            self.gui["boss_title"].color = (255, 255, 255, int(255 * progress))
+            self.gui["boss_health"].color = (255, 0, 0, int(255 * progress))
+            self.gui["message1"].color = (255, 255, 255, int(255 * progress))
+            self.gui["phase_marker1"].color = (255, 255, 255, int(255 * progress))
+            self.gui["phase_marker2"].color = (255, 255, 255, int(255 * progress))
+            self.gui["phase_marker3"].color = (255, 255, 255, int(255 * progress))
+            yield
+
+    def warning_scroll(self):
+        for i in range(180):
+            self.gui["warning1"].x = 640 + (2 * i) % (
+                self.gui["warning1"].content_width / 10
+            )
+            self.gui["warning2"].x = 640 - (2 * i) % (
+                self.gui["warning2"].content_width / 10
+            )
+            yield
+
+    def hexagon(self, name, delay):
+        yield from sleep_ticks(delay)
+        for i in range(15):
+            progress = i / 14
+            self.gui[name].height = 256 * max(progress, 0.001)
+            yield
+        yield from sleep_ticks(120)
+        for i in range(15):
+            progress = i / 14
+            self.gui[name].height = 256 * max(1 - progress, 0.001)
+            yield
+        del self.gui[name]
+
+    def message_scroll(self):
+        i = 0
+        while True:
+            self.gui["message1"].x = 640 - i % (self.gui["message1"].content_width // 3)
+            i += 5
+            yield
+
+    def anim_main(self):
+        for col in range(7):
+            for row in range(7):
+                self.anim_coroutines.add(
+                    self.hexagon(f"hex{col}_{row}", 3 * (col + row))
+                )
+        self.anim_coroutines.add(self.warning_scroll())
+        self.anim_coroutines.add(self.message_scroll())
+        self.anim_coroutines.add(self.warning_fadein())
+        yield from sleep_ticks(30)
+        self.anim_coroutines.add(self.boss_title_type())
+        yield from sleep_ticks(120)
+        del self.gui["black"]
+        self.anim_coroutines.add(self.warning_fadeout())
+        self.anim_coroutines.add(self.top_ui_fadein())
+        yield from sleep_ticks(30)
+
     def tick(self, pressed_keys):
-        if self.ticks < INTRO_LEN and not self.boss.destructing:
+        self.focusing = arcade.key.LSHIFT in pressed_keys
+        if not self.is_server and not self.boss.destructing:
+            self.anim_coroutines.tick()
+        if self.ticks == 180:
+            self.game_running = True
+        if self.boss_phase == 1 and self.boss_health <= self.boss_max_health * 0.75:
+            self.boss_phase = 2
+            self.boss_script.new_phase(2)
             if not self.is_server:
-                if self.ticks < 30:
-                    progress = self.ticks / 29
-                    self.gui["warning_background"].color = (
-                        0,
-                        0,
-                        0,
-                        int(128 * progress),
-                    )
-                    self.gui["warning1"].color = (255, 0, 0, int(255 * progress))
-                    self.gui["warning2"].color = (255, 0, 0, int(255 * progress))
-                elif self.ticks < 120:
-                    progress = (self.ticks - 30) / 89
-                    type_len = 1 + int(progress * len(BOSS_TITLE))
-                    if type_len != len(self.gui["warning_title"].text):
-                        self.gui["warning_title"].text = BOSS_TITLE[:type_len]
-                elif self.ticks >= 150:
-                    progress = (self.ticks - 150) / 29
-                    self.gui["warning_background"].color = (
-                        0,
-                        0,
-                        0,
-                        int(128 * (1 - progress)),
-                    )
-                    self.gui["warning1"].color = (200, 0, 0, int(255 * (1 - progress)))
-                    self.gui["warning2"].color = (255, 0, 0, int(255 * (1 - progress)))
-                    self.gui["warning_title"].color = (
-                        255,
-                        255,
-                        255,
-                        int(255 * (1 - progress)),
-                    )
-                    self.gui["boss_title_background"].color = (
-                        0,
-                        0,
-                        0,
-                        int(128 * progress),
-                    )
-                    self.gui["boss_title"].color = (255, 255, 255, int(255 * progress))
-                    self.gui["boss_health"].color = (255, 0, 0, int(255 * progress))
-                self.gui["warning1"].x += 2
-                self.gui["warning2"].x -= 2
-        else:
+                self.gui["boss_title"].text = BOSS_TITLES[1]
+        elif self.boss_phase == 2 and self.boss_health <= self.boss_max_health * 0.5:
+            self.boss_phase = 3
+            self.boss_script.new_phase(3)
+            if not self.is_server:
+                self.gui["boss_title"].text = BOSS_TITLES[2]
+        elif self.boss_phase == 3 and self.boss_health <= self.boss_max_health * 0.25:
+            self.boss_phase = 4
+            self.boss_script.new_phase(4)
+            if not self.is_server:
+                self.gui["boss_title"].text = BOSS_TITLES[3]
+        if self.game_running:
             if not self.boss.destructing:
                 if (
                     not self.player.dead
@@ -226,12 +352,7 @@ class DanmakuSystem:
                         )
                     )
                 if self.boss_health > 0:
-                    if self.ticks % 30 == 0:
-                        self.shoot(
-                            danmaku.SimpleBullet(
-                                self, 640, 870, 200, self.angle_to_player(640, 870)
-                            )
-                        )
+                    self.boss_script.tick()
                 else:
                     self.boss.destruct()
                     self.despawn_all(self.bullets)
@@ -287,15 +408,15 @@ class DanmakuSystem:
             if (
                 not bullet.intangible
                 and px - PLAYER_HITBOX_RADIUS
-                < bullet.position[0] + bullet.hitbox_radius
+                < bullet.position[0] + bullet.hitbox_radius_x
                 and px + PLAYER_HITBOX_RADIUS
-                > bullet.position[0] - bullet.hitbox_radius
+                > bullet.position[0] - bullet.hitbox_radius_x
                 and py - PLAYER_HITBOX_RADIUS
-                < bullet.position[1] + bullet.hitbox_radius
+                < bullet.position[1] + bullet.hitbox_radius_y
                 and py + PLAYER_HITBOX_RADIUS
-                > bullet.position[1] - bullet.hitbox_radius
+                > bullet.position[1] - bullet.hitbox_radius_y
             ):
-                self.player.decrease_health(1)
+                self.player.decrease_health(500)
                 if self.player.dead:
                     self.despawn_all(self.player_bullets)
                 else:
@@ -305,10 +426,10 @@ class DanmakuSystem:
         for bullet in self.player_bullets:
             if (
                 not bullet.intangible
-                and self.boss_hitbox[0] < bullet.position[0] + bullet.hitbox_radius
-                and self.boss_hitbox[1] > bullet.position[0] - bullet.hitbox_radius
-                and self.boss_hitbox[2] < bullet.position[1] + bullet.hitbox_radius
-                and self.boss_hitbox[3] > bullet.position[1] - bullet.hitbox_radius
+                and self.boss_hitbox[0] < bullet.position[0] + bullet.hitbox_radius_x
+                and self.boss_hitbox[1] > bullet.position[0] - bullet.hitbox_radius_x
+                and self.boss_hitbox[2] < bullet.position[1] + bullet.hitbox_radius_y
+                and self.boss_hitbox[3] > bullet.position[1] - bullet.hitbox_radius_y
             ):
                 self.boss_health -= 1
                 if self.boss_flash_cooldown == 0 and not self.boss.destructing:
@@ -343,4 +464,4 @@ class DanmakuSystem:
             or self.player.y <= 0
             or self.player.y >= 1280
         ):
-            self.player.decrease_health(200)
+            self.player.decrease_health(500)
