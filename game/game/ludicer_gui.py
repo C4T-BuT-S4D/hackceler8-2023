@@ -819,7 +819,7 @@ class Hackceler8(arcade.Window):
 
                     cur_keys = set()
                     for key in keys:
-                        if key == '':
+                        if key == "":
                             continue
                         if isinstance(key, str):
                             key = getattr(arcade.key, key)
@@ -1185,7 +1185,6 @@ class Hackceler8(arcade.Window):
             logging.warn("No recording chosen")
             return
 
-        update_settings(lambda s: s.update(recording_filename=None))
         path = os.path.join(os.path.dirname(__file__), "cheats", "recordings", filename)
 
         try:
