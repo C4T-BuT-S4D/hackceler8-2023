@@ -572,7 +572,7 @@ class Hackceler8(arcade.Window):
             tick_to_apply = self.ticks_to_apply.pop(0)
             keys_to_restore = self.game.raw_pressed_keys.copy()
 
-            self.game.force_random_seed = tick_to_apply.random_seed
+            # self.game.force_random_seed = tick_to_apply.random_seed
 
             if tick_to_apply.force_keys:
                 self.game.raw_pressed_keys = set(tick_to_apply.keys)
@@ -612,7 +612,7 @@ class Hackceler8(arcade.Window):
             self.tick_game_with_shooting()
             if keys_to_restore is not None:
                 self.game.raw_pressed_keys = keys_to_restore
-                self.game.force_random_seed = None
+                # self.game.force_random_seed = None
             return
         do_validate = get_settings()["validate_transitions"]
         if do_validate:
@@ -625,7 +625,7 @@ class Hackceler8(arcade.Window):
 
         if keys_to_restore is not None:
             self.game.raw_pressed_keys = keys_to_restore
-            self.game.force_random_seed = None
+            # self.game.force_random_seed = None
 
         if do_validate:
             attrs = [("x", "x"), ("y", "y"), ("x_speed", "vx"), ("y_speed", "vy")]

@@ -560,8 +560,9 @@ class Ludicer:
             "keys": list(self.pressed_keys),
             "text_input": self.get_text_input(),
             "llm_ack": llm_ack,
-            "seed": self.rand_seed,
         }
+        if self.tics <= 1:
+            msg["seed"] = self.rand_seed
         msg = json.dumps(msg).encode()
         self.net.send_one(msg)
 
@@ -751,18 +752,19 @@ class Ludicer:
 
     def init_random(self):
         if not self.is_server:
-            if self.force_random_seed is not None:
+            if self.force_random_seed is not None and self.tics == 0:
                 self.rand_seed = self.force_random_seed
                 self.rng_system.seed(self.rand_seed)
                 return
 
-            if force_seed := get_settings().get("random_seed", None):
+            if force_seed := get_settings().get("random_seed", None) and self.tics == 0:
                 self.rand_seed = force_seed
                 self.rng_system.seed(self.rand_seed)
                 return
 
-            self.rand_seed = 1337
-            self.rng_system.seed(self.rand_seed)
+            if self.tics == 0:
+                self.rand_seed = 1337
+                self.rng_system.seed(self.rand_seed)
 
         # Sync seed with client on startup.
         elif self.rand_seed is not None and self.tics == 0:
