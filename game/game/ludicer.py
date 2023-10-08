@@ -19,6 +19,7 @@ from copy import copy
 from enum import Enum
 from threading import Lock
 from threading import Thread
+import os
 
 import arcade
 import numpy as np
