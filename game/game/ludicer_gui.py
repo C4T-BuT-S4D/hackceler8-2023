@@ -223,7 +223,7 @@ class Hackceler8(arcade.Window):
             self.game.danmaku_system.draw_gui()
 
         arcade.draw_text(
-            "HEALTH: %.02f" % self.game.player.health,
+            "HEALTH: %.02f" % self.game.tics,
             10,
             10,
             arcade.csscolor.RED,
