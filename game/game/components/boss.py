@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import random
 
+import google.generativeai as genai
 import pytiled_parser
 
+import constants
 from components.explosion import Explosion
 from components.magic_items import Item
 from engine import generics

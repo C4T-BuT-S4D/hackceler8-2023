@@ -360,7 +360,15 @@ class BasicTileMap:
         elif "arena" in o.name:
             logging.debug(o)
             logging.debug("parsing new arena object")
-            self.static_objs.append(arena.Arena(coords, o.size, o.name))
+            self.static_objs.append(
+                arena.Arena(
+                    coords,
+                    o.size,
+                    o.name,
+                    props.get("stitching", False),
+                    props.get("dir", None),
+                )
+            )
 
         elif o.name.startswith("moving_platform_"):
             p = moving_platform.MovingPlatform(

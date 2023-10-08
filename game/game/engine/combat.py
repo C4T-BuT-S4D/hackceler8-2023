@@ -16,6 +16,9 @@ import logging
 from copy import deepcopy
 
 import arcade
+import pytiled_parser
+
+from components.weapon import weapon_types
 
 
 class CombatSystem:
@@ -92,7 +95,6 @@ class CombatSystem:
         wep.active = False
         wep.ai_controlled = True
         wep.equipped = False
-        wep.cool_down_timer = 0
 
     def _update_active_weapons(self, pressed_keys, newly_pressed_keys, tics):
         for i in self.game.player.weapons:

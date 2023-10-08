@@ -16,7 +16,9 @@ import logging
 
 import arcade
 
+import constants
 from engine import generics
+from engine import hitbox
 
 
 class Player(generics.GenericObject):
@@ -50,12 +52,12 @@ class Player(generics.GenericObject):
         self.last_movement = None
         self.running = False
         self.platformer_rules = False
-        self.danmaku_rules = False
         self.allowed_directions = set()
         self.reset_movements()
         self.jump_override = False
         self.inverted_controls = False
         self.weapons = []
+        self.immune_to_env = False
 
         # modifiers
         self.speed_multiplier = 1.5
@@ -139,16 +141,12 @@ class Player(generics.GenericObject):
         self.direction = direction
 
         speed_multplier = 1
-        if self.danmaku_rules:
-            # in danmaku, sprinting is "focusing"
-            speed_multplier = 0.85 if sprinting else 2
-        else:
-            if not self.platformer_rules or (
-                self.direction == self.DIR_E or self.direction == self.DIR_W
-            ):
-                if sprinting:
-                    speed_multplier = self.speed_multiplier
-                    self.running = True
+        if not self.platformer_rules or (
+            self.direction == self.DIR_E or self.direction == self.DIR_W
+        ):
+            if sprinting:
+                speed_multplier = self.speed_multiplier
+                self.running = True
 
         if self.direction == self.DIR_E or self.direction == self.DIR_W:
             self.face_towards = direction
@@ -266,7 +264,9 @@ class Player(generics.GenericObject):
                     self.set_health(self.MAX_HEALTH)
                     logging.info("Max health permanently set to 200")
             case "magnet":
-                pass
+                if not self.immune_to_env:
+                    self.immune_to_env = True
+                    logging.info(f"Player is now immune to env tiles")
             case "boots":
                 if not self.speed_bonus:
                     self.speed_multiplier = 2
@@ -274,6 +274,6 @@ class Player(generics.GenericObject):
                     logging.info("Speed multiplier permanently increased")
             case "noogler":
                 if not self.jump_bonus:
-                    self.jump_multiplier = 2
+                    self.jump_multiplier = 1.2
                     self.jump_bonus = True
                     logging.info("Jump multiplier permanently increased")

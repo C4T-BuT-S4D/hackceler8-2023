@@ -7,8 +7,8 @@ maturin
 flask
 WTForms
 Flask-AutoIndex
-js2py >= 0.74
 autoflake==2.2.1
 black==23.9.1
 isort==5.12.0
 pydantic==2.4.2
+js2py

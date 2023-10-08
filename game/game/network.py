@@ -20,6 +20,7 @@ import socket
 import ssl
 import struct
 import threading
+import time
 
 from engine.state import SaveFile
 
@@ -30,7 +31,6 @@ def perform_ssl_handshake(
     if os.getenv("GAME_SSL") == "f":
         logging.warn("Establishing connection without SSL")
         return sock
-
     logging.info(f"Performing SSL handshake, cert={cert}, ca={ca}")
     if is_server:
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH, cafile=ca)
