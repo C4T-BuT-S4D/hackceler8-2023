@@ -256,7 +256,7 @@ class Hackceler8(arcade.Window):
             f"TICKS: {self.game.tics}",
             450,
             10,
-            arcade.csscolor.GREEN,
+            arcade.csscolor.ORANGE,
             18,
             font_name=constants.FONT_NAME,
         )
