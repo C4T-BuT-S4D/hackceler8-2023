@@ -225,12 +225,8 @@ class GenericObject(hitbox.Hitbox):
     def decrease_health(self, points):
         logging.debug(f"decreasing {self} health")
         self.health = max(0, min(100, self.health - points))
-        if self.health <= 0:
-            self.dead = True
 
     def increase_health(self, points):
-        if self.dead:
-            return
         logging.debug(f"regen {self} health")
         self.health = max(0, min(100, self.health + points))
 

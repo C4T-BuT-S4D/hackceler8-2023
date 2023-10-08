@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import glob
+
 import json
 import logging
 import os
@@ -61,7 +61,7 @@ COLOR_LIST = [
 
 
 class Ludicer:
-    def __init__(self, net, is_server, debug=False, eager_level_load=True):
+    def __init__(self, net, is_server, debug=True, eager_level_load=True):
         self.mutex = Lock()
         self.net = net
 
@@ -94,10 +94,6 @@ class Ludicer:
         # We keep a pristine copy to allow for resets
         self.original_maps_dict = copy(self.maps_dict)
 
-        maze_arena_mapping = {
-            f"{fn[:-4]}_arena": fn[:-4]
-            for fn in map(os.path.basename, glob.glob("resources/maps/maze_*_map.mgz"))
-        }
         self.arena_mapping = {
             "spike_arena": "spike",
             "logic_arena": "logic",
@@ -106,7 +102,6 @@ class Ludicer:
             "red_arena": "rusty",
             "violet_arena": "space",
             "orange_arena": "water",
-            **maze_arena_mapping,
         }
 
         self.scene_dict = {}
@@ -160,6 +155,7 @@ class Ludicer:
         self.logic_engine = None
         self.danmaku_system = None
         self.grenade_system = None
+        self.brainduck = None
 
         self.boss = None
         self.unlocked_doors = set()
@@ -267,7 +263,6 @@ class Ludicer:
             ),
             Item(None, name="magnet", display_name="Magnet", wearable=True),
             Item(None, name="boots", display_name="Boots", wearable=True),
-            Item(None, name="noogler", display_name="NooglerHat", wearable=True),
             Item(None, name="flag_llm", display_name="LLM flag", wearable=False),
         ]
 
@@ -354,6 +349,7 @@ class Ludicer:
         self.physics_engine = None
         self.logic_engine = None
         self.level_modifier = None
+        self.brainduck = None
         self.current_mode = self.maps_dict[self.current_map].game_mode
 
         match self.current_mode:
@@ -403,8 +399,6 @@ class Ludicer:
                 ):
                     x, y = self.player_last_base_position
                     o.place_at(x, y)
-                elif self.current_map.startswith("maze"):
-                    pass
                 elif self.current_map in self.player_starting_position:
                     x, y = self.player_starting_position[self.current_map]
                     o.place_at(x, y)
@@ -445,9 +439,14 @@ class Ludicer:
         self.static_objs = self.tiled_map.static_objs.copy()
         for o in self.static_objs:
             o.reset()
+            if o.nametype == "Brainduck":
+                logging.info("Have Brainduck")
+                self.brainduck = o
+                self.order_brainduck()
 
         self.physics_engine = physics.PhysicsEngine(
             platformer_rules=(self.current_mode == GameMode.MODE_PLATFORMER),
+            danmaku_rules=(self.current_map == "danmaku"),
             objects=[self.player] + self.objects + self.dynamic_artifacts,
             qt=self.tiled_map.qt,
             obj_map=self.tiled_map.obj_map,
@@ -463,7 +462,7 @@ class Ludicer:
     def setup_platformer(self):
         self.setup_scroller()
         self.player.base_y_speed = 320
-        if self.current_map == "space":
+        if self.current_map == "rusty":
             self.level_modifier = Ludifier(self.tiled_map)
 
     def switch_maps(self, new_map):
@@ -650,10 +649,7 @@ class Ludicer:
         if arcade.key.ESCAPE in self.newly_pressed_keys:
             self.reset_to_main_map()
         elif arcade.key.R in self.newly_pressed_keys:
-            if self.current_map.startswith("maze"):
-                self.reset_to_main_map()
-            else:
-                self.reset_current_level()
+            self.reset_current_level()
 
         self.check_modifier_proximities()
         self.check_proximities()
@@ -687,6 +683,8 @@ class Ludicer:
         Switch.check_all_pressed(self)
 
         if self.player is not None:
+            if self.brainduck is not None:
+                self.handle_duck_logic()
             self.player.tick(
                 self.pressed_keys,
                 self.newly_pressed_keys,
@@ -699,13 +697,15 @@ class Ludicer:
         self.logic_engine.tick()
 
         if self.physics_engine.exit_on_next:
+            if self.brainduck is not None:
+                self.handle_duck_exit()
             self.switch_maps("base")
 
         if self.level_modifier is not None:
             new_object = self.level_modifier.tick()
             if new_object is not None:
-                for _obj in new_object:
-                    self.static_objs.append(_obj)
+                for _no in new_object:
+                    self.static_objs.append(_no)
 
         return self.send_game_info()
 
@@ -759,7 +759,7 @@ class Ludicer:
                 c, _ = o.collides(self.player)
                 if c:
                     self.player.apply_modifier(o.modifier, 0)
-                    logging.info(f"apply {o.name} {self.tics}")
+                    logging.debug(f"apply {o.name} {self.tics}")
                     continue
                 current_distance = o.proximity(self.player)
                 if current_distance < o.modifier.min_distance:
@@ -776,48 +776,6 @@ class Ludicer:
                         if o.name in self.arena_mapping:
                             logging.debug(f"loading map {self.current_map}")
                             self.switch_maps(self.arena_mapping[o.name])
-                            next_tiled_map = self.maps_dict[self.current_map].tiled_map
-                            if o.stitching:
-                                gap_from_boundary = 16 * 2
-                                match o.dir:
-                                    case "L":
-                                        nx = constants.MAZE_REGION_OFFSET + (
-                                            constants.MAZE_REGION_SIZE
-                                            - gap_from_boundary
-                                        )
-                                        ny = self.player.prev_y
-                                    case "R":
-                                        nx = (
-                                            constants.MAZE_REGION_OFFSET
-                                            + gap_from_boundary
-                                        )
-                                        ny = self.player.prev_y
-                                    case "U":
-                                        nx = self.player.prev_x
-                                        ny = (
-                                            (
-                                                next_tiled_map.height_pixel
-                                                - constants.MAZE_REGION_SIZE
-                                            )
-                                            + gap_from_boundary
-                                            - constants.MAZE_REGION_OFFSET
-                                        )
-                                    case "D":
-                                        nx = self.player.prev_x
-                                        ny = (
-                                            next_tiled_map.height_pixel
-                                            - gap_from_boundary
-                                            - constants.MAZE_REGION_OFFSET
-                                        )
-
-                                player = [
-                                    o
-                                    for o in next_tiled_map.objs
-                                    if o.nametype == "Player"
-                                ][0]
-                                player.orig_x = nx
-                                player.orig_y = ny
-
                             return
 
                         logging.warning(
@@ -847,6 +805,12 @@ class Ludicer:
                         self.player.set_speed(o.x_speed, o.y_speed)
                         self.player.in_the_air = True
                         return
+
+                    case "Brainduck":
+                        self.activate_duck_mode()
+
+                    case "Duck":
+                        self.duck_collision(o)
 
                     case "Wall":
                         if o.name == "killawall":
@@ -893,3 +857,58 @@ class Ludicer:
                 c, _ = o.collides(self.player)
                 if c and arcade.key.E in self.newly_pressed_keys:
                     o.interact()
+
+    def order_brainduck(self, length=10):
+        if self.brainduck is None:
+            logging.critical("No brainduck in current map")
+            return
+        order = self.brainduck.order
+        self.rng_system.prng.shuffle(order)
+        order = order[:length]
+        logging.info(
+            f"Player collided with Brainduck, entering " f"duck mode. Order: {order}"
+        )
+
+        self.brainduck.order = order
+
+    def activate_duck_mode(self):
+        if self.brainduck is None:
+            logging.critical("No brainduck in current map")
+            return
+        if self.brainduck.active:
+            return
+
+        self.brainduck.start()
+        self.brainduck.active = True
+
+    def duck_collision(self, _duck):
+        if not _duck.visited:
+            _duck.visited = True
+            self.brainduck.duck_ids.append(_duck.duck_id)
+
+    def handle_duck_logic(self):
+        duck_input = self.brainduck.tick(self.pressed_keys, self.newly_pressed_keys)
+        if duck_input == "recording":
+            return
+
+        if duck_input is None:
+            logging.info("No more input. Stopping duck mode.")
+            logging.info(
+                f"Total time in maze " f"{time.time() - self.brainduck.start_time}"
+            )
+            self.brainduck.stop()
+            # self.duck_mode = False
+            self.player.dead = True
+            self.brainduck = None
+        else:
+            logging.debug(f"Got newly pressed key {duck_input}")
+            self.pressed_keys = [duck_input[0]]
+            if duck_input[1]:
+                self.pressed_keys.append(arcade.key.LSHIFT)
+
+    def handle_duck_exit(self):
+        it = self.brainduck.check_order()
+        if it is not None:
+            self.gather_items([it])
+        logging.info(self.brainduck.duck_ids)
+        logging.info("Maze exited")
