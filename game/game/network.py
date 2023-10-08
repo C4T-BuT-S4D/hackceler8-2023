@@ -15,7 +15,7 @@
 import http.server
 import json
 import logging
-impor  os
+import os
 import socket
 import ssl
 import struct
