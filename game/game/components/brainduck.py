@@ -48,11 +48,13 @@ class Brainduck(generics.GenericObject):
         self.blocking = False
         self.instructions_override = instructions_override
         self.name = name
-        # secrets.seed(seed)
+        self.item_yielded = False
         self.stopped = False
         self.max_steps = max_steps
 
         self.interpreter = None
+
+        self.duck_ids = []
 
         self.last_press_tics = 0
         self.failed = False
@@ -68,17 +70,13 @@ class Brainduck(generics.GenericObject):
 
         self.start_time = 0
 
-        self.duck_ids = []
-
         self.pc = 0
-        self.item_yielded = False
 
         self.reset()
 
     def reset(self):
         self.stopped = False
         self.active = False
-        self.pc = 0
 
         self.last_press_tics = 0
         self.failed = False
@@ -135,10 +133,8 @@ class Brainduck(generics.GenericObject):
         logging.info(f"Walk equivalent: " f"{[chr(i[0]) for i in self.walking_data]}")
         logging.info(f"Recorded for a total of {self.recorded_tics}")
         logging.info(f"Recorded a total of {len(self.instructions)} steps")
-
         self.interpreter = Interpreter(self.instructions)
         self.interpreter.order = self.order
-        logging.info(f"Execution started with order {self.order}")
         self.interpreter.start()
 
     def stop(self):
@@ -185,7 +181,9 @@ class Brainduck(generics.GenericObject):
     def yield_item(self):
         if not self.item_yielded:
             self.item_yielded = True
-            return Item(coords=None, name="boots", display_name="Boots", wearable=True)
+            return Item(
+                coords=None, name="magnet", display_name="Magnet", wearable=True
+            )
 
     def check_order(self):
         if self.duck_ids == self.interpreter.order:
@@ -198,8 +196,6 @@ class Brainduck(generics.GenericObject):
         match self.mode:
             case DuckModes.MODE_RECORDING:
                 self.add_key(pressed_keys, newly_pressed_keys)
-                logging.debug("Recording")
                 return "recording"
             case DuckModes.MODE_EXECUTING:
-                logging.debug("Executing")
                 return self.run_to_print()

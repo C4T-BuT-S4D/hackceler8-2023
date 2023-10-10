@@ -29,6 +29,7 @@ class Player(generics.GenericObject):
     PLATFORMER_TILESET = "resources/character/AnimationSheet_Mew.tmx"
     SCROLLER_TILESET = "resources/character/AnimationSheet_OverheadMew.tmx"
     MAX_HEALTH = 100
+    MAX_ALLOWED_SPEED = 55
 
     def __init__(self, coords, outline):
         super().__init__(
@@ -280,3 +281,16 @@ class Player(generics.GenericObject):
                     self.jump_multiplier = 1.2
                     self.jump_bonus = True
                     logging.info("Jump multiplier permanently increased")
+
+    def update_position(self):
+        prev_rect = self.get_rect()
+        super().update_position()
+        rect = self.get_rect()
+        if (
+            abs(prev_rect.x1() - rect.x1()) + abs(prev_rect.y1() - rect.y1())
+            > self.MAX_ALLOWED_SPEED
+        ):
+            logging.warning(
+                str(abs(prev_rect.x1() - rect.x1()) + abs(prev_rect.y1() - rect.y1()))
+            )
+            self.game.cheating_detected = True

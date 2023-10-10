@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import math
 from collections import deque
+from ctypes import c_int16
 
 import arcade
 import numpy as np
@@ -124,22 +125,23 @@ def to_bytes(i):
 
 class Rectangle:
     def __init__(self, x1, x2, y1, y2):
-        self._x1 = x1
-        self._x2 = x2
-        self._y1 = y1
-        self._y2 = y2
+        # Compact storage for space efficiency
+        self._x1 = c_int16(round(x1))
+        self._x2 = c_int16(round(x2))
+        self._y1 = c_int16(round(y1))
+        self._y2 = c_int16(round(y2))
 
     def x1(self):
-        return self._x1
+        return self._x1.value
 
     def x2(self):
-        return self._x2
+        return self._x2.value
 
     def y1(self):
-        return self._y1
+        return self._y1.value
 
     def y2(self):
-        return self._y2
+        return self._y2.value
 
     def collides(self, other: Rectangle):
         return (

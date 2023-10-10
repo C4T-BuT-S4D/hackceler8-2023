@@ -44,6 +44,8 @@ class Boss(generics.GenericObject):
         self.destructing = False
         self.dead = False
 
+        self.item = None
+
         self.explosions = []
 
         self.destruct_timer = 0
