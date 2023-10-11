@@ -1,6 +1,6 @@
-# hackceler8-2023
+# Hackceler8 2023
 
-Tooling for Google CTF Hackceler8 2023 by C4T BuT S4D team
+Tooling for the Google CTF 2023 Hackceler8 finals by the C4T BuT S4D team.
 
 ## Features
 
@@ -10,6 +10,8 @@ Tooling for Google CTF Hackceler8 2023 by C4T BuT S4D team
 - Playthrough recording is toggled on `Ctrl+R`, with saves being taken every 5 seconds by default and additionally on various events (map change, death, manual save). Recording to be played can then be chosen in the cheats UI and enabled on `Ctrl+L`.
 - Up to 9 macros (useful for completing various NPC-related challenges) can be added through the cheats UI, and can be replayed manually using `Alt+N`.
 - Active map rendering happens in the cheats UI. Additionally, all maps can be prerendered using `&`, the prerenders are placed in the `static` directory of the cheats UI.
+- Automatic shooting with smart weapon cycling via dropping the current weapon and instantly picking it up enabled on `]`. Also enables automatic shooting for the Danmaku boss fights.
+- Negation of control inversion by enemies on the client's side.
 - Utility [client.sh](./game/client.sh) and [server.sh](./game/server.sh) scripts to start the game locally in different modes and with/without SSL.
 
 ## Cheats UI
@@ -23,18 +25,6 @@ Pathfinding parameters, GUI modifications, and other cheats can be configured he
 
 Recordings are listed for each map with an additional screenshot of the game at the time when the recording was saved.
 ![recordings](screenshots/recordings.jpg)
-
-- [cheats-rust](cheats-rust) contains rewritten physics & parallel A\* pathfinding in Rust
-  (built with maturin `opt` profile)
-- Hitbox highlighting, object tracing, auxiliary info display (tick, boss hp)
-- Single-tick mode (press backspace to advance one tick, see player debug info in console)
-- Game recordings (save everything sent to server, replay on a game laptop afterward)
-- Macros (same as recordings, but simpler & controlled by UI)
-- UI (default port 8888 if using `client.sh`):
-  - Map screenshots
-  - Recordings loading with screenshots
-  - Up to 9 macros
-  - Path finding parameters control, UI control
 
 ### Map
 
